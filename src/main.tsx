@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import AppShell from './app-shell';
 import './style.css';
 
 /* ---------- shared bits ---------- */
@@ -57,11 +58,10 @@ function Nav() {
         </a>
         <div className="nav-links">
           <a href="#top">Home</a>
-          <a href="#why">About</a>
+          <a href="#/about">About</a>
           <a href="#pricing">Pricing</a>
-          <a href="#pricing">Sign in</a>
         </div>
-        <a className="btn btn-light" href="#pricing">
+        <a className="btn btn-light" href="#/app">
           Get Started →
         </a>
       </nav>
@@ -116,10 +116,10 @@ function Hero() {
         <br className="desktop-br" /> them to TikTok and YouTube from one place.
       </p>
       <div className="hero-ctas">
-        <a className="btn btn-purple" href="#pricing">
+        <a className="btn btn-purple" href="#/app">
           Start for free
         </a>
-        <a className="btn btn-ghost" href="#how">
+        <a className="btn btn-ghost" href="#/app">
           Watch the demo →
         </a>
       </div>
@@ -700,13 +700,186 @@ function Cta() {
         Join thousands of creators turning long videos into short-form gold. Start for free, no
         credit card required.
       </p>
-      <a className="btn btn-purple big" href="#pricing">
+      <a className="btn btn-purple big" href="#/app">
         Start for free
       </a>
       <CheckPill />
     </section>
   );
 }
+
+/* ---------- sub pages ---------- */
+
+function PageShell({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  return (
+    <div className="page">
+      <Stars />
+      <Nav />
+      <main>
+        <section className="section in-view" style={{ paddingTop: 80 }}>
+          {children}
+        </section>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function AboutPage() {
+  return (
+    <PageShell>
+      <Eyebrow>Our Story</Eyebrow>
+      <h2>
+        Built for creators, <span className="serif">by creators.</span>
+      </h2>
+      <p className="sub">
+        Zophous started with a simple obsession: why does creating viral content take so long? We
+        built the tool we wished existed. Every creator deserves the same editing power that big
+        studios have. AI should do the grunt work. You should focus on creating.
+      </p>
+      <div className="audience-grid" style={{ marginTop: 40 }}>
+        {[
+          ['✦ Simplicity First', 'We strip away complexity so creators can focus on what they do best: creating. Every feature earns its place.'],
+          ['⚡ Speed is a Feature', "Waiting kills momentum. We obsess over making Zophous faster at every step, from upload to export."],
+          ['🤝 Creator-Led', "We build with creators, not for them. Every decision starts with the question: does this make a creator's life easier?"],
+          ['🔍 Radical Transparency', 'We share our roadmap, our mistakes, and our wins openly. Trust is built through honesty, not polish.'],
+        ].map(([t, d]) => (
+          <div className="audience-card" key={t}>
+            <h3>{t}</h3>
+            <p>{d}</p>
+          </div>
+        ))}
+      </div>
+      <h2 style={{ marginTop: 70 }}>
+        Hi, I'm <span className="serif">Daniel McCord.</span>
+      </h2>
+      <p className="sub">
+        I started Zophous because when I was beginning my entrepreneurial journey, there was no
+        guide. Around that time I started my podcast, Dmac Pods, and one problem kept surfacing:
+        creating viral clips was eating hours I didn't have as a college student. With a background
+        in computer science, I built a product that automatically finds and edits viral clips.
+      </p>
+      <div className="quote-stats" style={{ justifyContent: 'center' }}>
+        <span>🎬 5.3K Followers in 3 Months</span>
+        <span>📈 1.3M Likes</span>
+        <span>🎙️ Podcaster · Dmac Pods</span>
+      </div>
+      <h2 style={{ marginTop: 70 }}>
+        From idea <span className="serif">to impact</span>
+      </h2>
+      <div className="dna-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 40 }}>
+        {[
+          ['Spring 2023', 'The Idea is Born', 'Zophous began as a business plan generator for aspiring entrepreneurs.'],
+          ['Fall 2024', 'Pivot to Clips', 'Manual clip editing ate my podcast hours — so Zophous pivoted to AI clipping.'],
+          ['Fall 2025', 'Public Launch', 'Officially launched to the public, and never stopped improving.'],
+        ].map(([when, t, d]) => (
+          <div className="dna-card" key={t}>
+            <span className="dna-n">{when}</span>
+            <h3>{t}</h3>
+            <p>{d}</p>
+          </div>
+        ))}
+      </div>
+    </PageShell>
+  );
+}
+
+function CommunityPage() {
+  return (
+    <PageShell>
+      <Eyebrow>Community</Eyebrow>
+      <h2>
+        Create better content, <span className="serif">together.</span>
+      </h2>
+      <p className="sub">
+        Our Discord is the heart of Zophous. Thousands of creators share tips, get support, and
+        celebrate wins every day.
+      </p>
+      <div className="features-grid" style={{ marginTop: 44 }}>
+        {[
+          ['🛟', 'Direct Support', 'Get help directly from the Zophous team and experienced community members.'],
+          ['🎁', 'Exclusive Giveaways', 'Regular giveaways for free minutes, premium features, and more.'],
+          ['🎓', 'Tutorials & Tips', 'Exclusive tutorials, workflow tips, and content-creation strategies.'],
+          ['🚀', 'Early Access', 'Be the first to try new features and shape the product with feedback.'],
+        ].map(([ic, t, d]) => (
+          <div className="feature-card" key={t}>
+            <span className="feature-icon">{ic}</span>
+            <h3>{t}</h3>
+            <p>{d}</p>
+          </div>
+        ))}
+      </div>
+    </PageShell>
+  );
+}
+
+function LegalPage({ kind }: { kind: 'terms' | 'privacy' | 'dmca' }) {
+  const copy: Record<string, [string, string]> = {
+    terms: [
+      'Terms of Service',
+      "Zophous never claims ownership of your content. You keep whatever rights you bring, and we never resell or repost it. You're responsible for having the rights to what you upload or clip: clipping content you don't own, without permission or a valid fair-use basis, can infringe the original creator's copyright. Plans are month-to-month, minutes reset monthly and do not roll over, and new subscribers get a 30-day money-back guarantee.",
+    ],
+    privacy: [
+      'Privacy Policy',
+      'We collect the minimum data needed to run your studio: your account email, the videos and clips you create, and performance data from accounts you explicitly connect. We use essential and analytics cookies to run and improve Zophous. We never sell your data, and you can delete your account and data at any time from Settings.',
+    ],
+    dmca: [
+      'DMCA Policy',
+      'Zophous responds to valid DMCA takedown notices. If you believe content on Zophous infringes your copyright, send a notice identifying the work, the allegedly infringing material, and your contact information. Repeat infringers lose access. You are responsible for having the rights to what you clip.',
+    ],
+  };
+  const [title, body] = copy[kind];
+  return (
+    <PageShell>
+      <Eyebrow>Legal</Eyebrow>
+      <h2>{title}</h2>
+      <p className="sub" style={{ textAlign: 'left', maxWidth: 640 }}>
+        {body}
+      </p>
+    </PageShell>
+  );
+}
+
+function ToolPage({ name }: { name: string }) {
+  const titles: Record<string, string> = {
+    'free-ai-clip-maker': 'Free AI clip maker for TikTok, Reels and Shorts',
+    'youtube-clip-maker': 'YouTube clip maker that finds the rewatched moments',
+    'podcast-clip-maker': 'Podcast clip maker for every episode',
+    'twitch-clip-maker': 'Twitch clip maker for hours of VODs',
+  };
+  return (
+    <PageShell>
+      <Eyebrow>{name.replace(/-/g, ' ')}</Eyebrow>
+      <h2>{titles[name] ?? name}</h2>
+      <p className="sub">
+        Paste a link or upload a video, and the AI picks the moments most likely to hold attention,
+        cuts them to 9:16, adds captions and a hook, and scores each clip so you know which to post
+        first. The free plan gives you 60 minutes a month, no credit card.
+      </p>
+      <div className="dna-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 44 }}>
+        {[
+          ['01', 'Paste or upload', 'A YouTube link, or an MP4/MOV up to 3 GB.'],
+          ['02', 'AI picks the window', 'It reads which parts viewers rewatch most. You can drag it.'],
+          ['03', 'Post the winners', 'Vertical clips with captions and hooks, each scored.'],
+        ].map(([n, t, d]) => (
+          <div className="dna-card" key={n}>
+            <span className="dna-n">{n}</span>
+            <h3>{t}</h3>
+            <p>{d}</p>
+          </div>
+        ))}
+      </div>
+      <a className="btn btn-purple big" href="#/app" style={{ marginTop: 40 }}>
+        Try it free
+      </a>
+    </PageShell>
+  );
+}
+
+/* ---------- footer ---------- */
 
 function Footer() {
   return (
@@ -716,9 +889,13 @@ function Footer() {
           <span className="logo-mark">◉</span> ZOPHOUS
         </a>
         <div className="footer-links">
-          <a href="#features">Features</a>
+          <a href="#/about">About</a>
+          <a href="#/community">Community</a>
           <a href="#pricing">Pricing</a>
           <a href="#faq">FAQ</a>
+          <a href="#/terms">Terms</a>
+          <a href="#/privacy">Privacy</a>
+          <a href="#/dmca">DMCA</a>
         </div>
         <p>© 2026 Zophous. Turn long videos into daily shorts.</p>
       </div>
@@ -726,9 +903,19 @@ function Footer() {
   );
 }
 
-/* ---------- app ---------- */
+/* ---------- app / router ---------- */
 
-function App() {
+function useRoute() {
+  const [route, setRoute] = useState(location.hash || '#/');
+  useEffect(() => {
+    const h = () => setRoute(location.hash || '#/');
+    window.addEventListener('hashchange', h);
+    return () => window.removeEventListener('hashchange', h);
+  }, []);
+  return route;
+}
+
+function Landing() {
   useEffect(() => {
     const sections = document.querySelectorAll('.section, .hero, .stats-row');
     const io = new IntersectionObserver(
@@ -770,6 +957,19 @@ function App() {
       <Footer />
     </div>
   );
+}
+
+function App() {
+  const route = useRoute();
+  if (route.startsWith('#/app')) return <AppShell />;
+  if (route === '#/about') return <AboutPage />;
+  if (route === '#/community') return <CommunityPage />;
+  if (route === '#/terms') return <LegalPage kind="terms" />;
+  if (route === '#/privacy') return <LegalPage kind="privacy" />;
+  if (route === '#/dmca') return <LegalPage kind="dmca" />;
+  const toolMatch = route.match(/^#\/tools\/([a-z-]+)$/);
+  if (toolMatch) return <ToolPage name={toolMatch[1]} />;
+  return <Landing />;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
