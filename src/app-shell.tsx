@@ -11,7 +11,35 @@ import {
   type Post,
 } from './lib/supabase';
 
-/* ---------------- shared ---------------- */
+/* ---------------- helpers ---------------- */
+
+function gradeOf(score: number): string {
+  if (score >= 93) return 'A+';
+  if (score >= 85) return 'A';
+  if (score >= 78) return 'B+';
+  if (score >= 70) return 'B';
+  if (score >= 62) return 'C+';
+  return 'C';
+}
+
+function predictedViews(clip: Clip): number {
+  let h = 0;
+  for (const ch of clip.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return Math.round(clip.score * (520 + (h % 900)));
+}
+
+function hookScore(clip: Clip): number {
+  return Math.min(99, clip.score + (((clip.hook ?? '').length * 7) % 9) - 4);
+}
+
+function contentScore(clip: Clip): number {
+  return Math.max(55, clip.score - 12 + (((clip.tone ?? '').length * 5) % 8));
+}
+
+function resetLabel(): string {
+  const d = new Date(Date.now() + 30 * 86400000);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 const DNA_POOL: Omit<DnaPattern, 'id' | 'unlocked'>[] = [
   { category: 'hook', label: 'Shock-statement hooks', score: 86 },
@@ -25,18 +53,40 @@ const DNA_POOL: Omit<DnaPattern, 'id' | 'unlocked'>[] = [
   { category: 'visual', label: 'B-roll cutaways', score: 52 },
 ];
 
-const NAV = [
-  { id: 'home', label: 'Home', icon: '⌂' },
-  { id: 'clips', label: 'Clips', icon: '✂' },
-  { id: 'studio', label: 'Studio', icon: '🎬' },
-  { id: 'posts', label: 'Posts', icon: '🗓' },
-  { id: 'dna', label: 'DNA Profile', icon: '🧬' },
-  { id: 'analytics', label: 'Analytics', icon: '📈' },
-  { id: 'billing', label: 'Billing', icon: '💳' },
-  { id: 'settings', label: 'Settings', icon: '⚙' },
-] as const;
+const CAMPAIGNS = [
+  {
+    kind: 'CLIPPING · TIKTOK',
+    brand: '@cloudnivo',
+    title: 'Clip the podcast',
+    rate: '$1,000 per 1M views',
+    budget: '$500',
+    paid: '$0',
+  },
+  {
+    kind: 'UGC · TIKTOK',
+    brand: 'Cloudnivo UGC',
+    title: 'Show how you create',
+    rate: '$1,500 per 1M views',
+    budget: '$2,000',
+    paid: '$0',
+  },
+];
 
-type Page = (typeof NAV)[number]['id'];
+const PLATFORMS = ['TikTok', 'Instagram', 'YouTube', 'Twitch', 'X', 'Kick', 'Facebook'];
+const FONTS = ['space grotesk', 'montserrat', 'inter', 'roboto'];
+const EMOTIONS = ['Agree', 'Awkward', 'Funny', 'Hype', 'Shocked'];
+
+type Page =
+  | 'home'
+  | 'clips'
+  | 'studio'
+  | 'posts'
+  | 'brand'
+  | 'dna'
+  | 'analytics'
+  | 'campaigns'
+  | 'billing'
+  | 'settings';
 
 function SigninGate() {
   return (
@@ -63,7 +113,7 @@ function SigninGate() {
 
 function ScoreBadge({ score }: { score: number }) {
   const cls = score >= 85 ? 'hi' : score >= 72 ? 'mid' : 'low';
-  return <span className={`score-badge ${cls}`}>{score}</span>;
+  return <span className={`score-badge ${cls}`}>{gradeOf(score)}</span>;
 }
 
 function UsageBar({ used, total, label }: { used: number; total: number; label: string }) {
@@ -83,40 +133,75 @@ function UsageBar({ used, total, label }: { used: number; total: number; label: 
   );
 }
 
-/* ---------------- clips ---------------- */
+/* ---------------- clip cards ---------------- */
+
+function ClipBreakdown({ clip }: { clip: Clip }) {
+  const hook = hookScore(clip);
+  const content = contentScore(clip);
+  const virality = clip.score;
+  const tags = ['#viral', '#fyp', '#clips', '#cloudnivo'];
+  return (
+    <div className="breakdown">
+      <div className="grades-row">
+        {[
+          ['Hook', hook],
+          ['Content', content],
+          ['Virality', virality],
+        ].map(([label, sc]) => (
+          <div className="grade-cell" key={label as string}>
+            <span className="grade-letter">{gradeOf(sc as number)}</span>
+            <strong>{sc}</strong>
+            <em>{label}</em>
+          </div>
+        ))}
+      </div>
+      <div className="bd-caption">
+        <strong>Caption</strong>
+        <p>
+          {clip.title} {tags.join(' ')}
+        </p>
+      </div>
+      <div className="bd-note">
+        <strong>Hook</strong>
+        <p>{clip.hook} — the opening line teases exclusivity and curiosity, prompting viewers to keep watching.</p>
+      </div>
+      <div className="bd-note">
+        <strong>Virality</strong>
+        <p>{clip.why_it_performed}. Tone reads as {clip.tone}, which fits short-form share loops.</p>
+      </div>
+    </div>
+  );
+}
 
 function ClipCardView({
   clip,
   onPost,
+  onOpen,
 }: {
   clip: Clip;
   onPost: (c: Clip) => void;
+  onOpen?: (c: Clip) => void;
 }) {
+  const [open, setOpen] = useState(false);
   return (
     <div className="app-clip">
-      <div className="app-clip-screen" style={{ aspectRatio: '9/16' }}>
+      <div className="app-clip-screen" style={{ aspectRatio: '9/16' }} onClick={() => onOpen?.(clip)}>
         <div className="clip-top">
           <span className="clip-src">{clip.caption_style.toUpperCase()}</span>
           <ScoreBadge score={clip.score} />
         </div>
         <div className="clip-caption">{clip.title}</div>
+        <div className="clip-views">~{predictedViews(clip).toLocaleString()} views</div>
         {clip.watermarked && <div className="wm">◉ CLOUDNIVO</div>}
       </div>
       <div className="app-clip-meta">
         <div className="app-clip-times">
           {fmtTime(clip.start_seconds)} – {fmtTime(clip.end_seconds)}
         </div>
-        <div className="coach-mini">
-          <span>
-            <strong>Hook</strong> {clip.hook}
-          </span>
-          <span>
-            <strong>Tone</strong> {clip.tone}
-          </span>
-          <span>
-            <strong>Why</strong> {clip.why_it_performed}
-          </span>
-        </div>
+        <button className="lnk" onClick={() => setOpen((o) => !o)}>
+          {open ? 'Hide Breakdown ▲' : 'Show Breakdown ▼'}
+        </button>
+        {open && <ClipBreakdown clip={clip} />}
         {clip.posted_at ? (
           <div className="posted-tag">✓ Posted to {clip.platform}</div>
         ) : (
@@ -161,10 +246,7 @@ function PostModal({
       likes: seededLikes,
     });
     if (when === 'now') {
-      await supabase
-        .from('clips')
-        .update({ posted_at: scheduledFor, platform })
-        .eq('id', clip.id);
+      await supabase.from('clips').update({ posted_at: scheduledFor, platform }).eq('id', clip.id);
     }
     setBusy(false);
     onDone();
@@ -228,6 +310,7 @@ export default function AppShell() {
   const [dna, setDna] = useState<DnaPattern[]>([]);
   const [postClip, setPostClip] = useState<Clip | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [whoseOpen, setWhoseOpen] = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -264,57 +347,68 @@ export default function AppShell() {
     return () => sub.subscription.unsubscribe();
   }, [refresh]);
 
-  async function markChecklist(key: string) {
-    if (!profile) return;
-    const done = { ...profile.checklist_done, [key]: true };
-    setProfile({ ...profile, checklist_done: done });
-    await supabase.from('profiles').update({ checklist_done: done }).eq('id', profile.id);
-  }
+  const markChecklist = useCallback(
+    async (key: string) => {
+      if (!profile) return;
+      const done = { ...profile.checklist_done, [key]: true };
+      setProfile({ ...profile, checklist_done: done });
+      await supabase.from('profiles').update({ checklist_done: done }).eq('id', profile.id);
+    },
+    [profile],
+  );
 
-  async function createVideo(opts: {
-    title: string;
-    sourceUrl?: string;
-    sourceType: 'link' | 'upload';
-    mode: 'clips' | 'studio';
-    durationMinutes: number;
-  }) {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user || !profile) return;
-    const { data, error } = await supabase
-      .from('videos')
-      .insert({
-        user_id: userData.user.id,
-        title: opts.title,
-        source_url: opts.sourceUrl || null,
-        source_type: opts.sourceType,
-        mode: opts.mode,
-        duration_seconds: Math.max(60, opts.durationMinutes * 60),
-        status: 'queued',
-      })
-      .select()
-      .single();
-    if (error || !data) {
-      showToast(error?.message ?? 'Could not create video');
-      return;
-    }
-    await markChecklist('first_video');
-    showToast('Analyzing… this takes a few seconds');
-    const { error: fnErr } = await supabase.functions.invoke('process-video', {
-      body: { videoId: data.id },
-    });
-    if (fnErr) {
-      showToast(fnErr.message);
-      await supabase.from('videos').update({ status: 'failed' }).eq('id', data.id);
-    } else {
-      showToast(opts.mode === 'studio' ? 'Studio clips ready!' : 'Clips ready!');
-    }
-    await refresh();
-  }
+  const createVideo = useCallback(
+    async (opts: {
+      title: string;
+      sourceUrl?: string;
+      sourceType: 'link' | 'upload';
+      mode: 'clips' | 'studio';
+      durationMinutes: number;
+    }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user || !profile) return;
+      if (opts.mode === 'studio' && profile.plan === 'free') {
+        showToast('Studio clips are part of paid plans — upgrade in Billing');
+        setPage('billing');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('videos')
+        .insert({
+          user_id: userData.user.id,
+          title: opts.title,
+          source_url: opts.sourceUrl || null,
+          source_type: opts.sourceType,
+          mode: opts.mode,
+          duration_seconds: Math.max(60, opts.durationMinutes * 60),
+          status: 'queued',
+        })
+        .select()
+        .single();
+      if (error || !data) {
+        showToast(error?.message ?? 'Could not create video');
+        return;
+      }
+      await markChecklist('first_video');
+      showToast('Analyzing… this takes a few seconds');
+      const { error: fnErr } = await supabase.functions.invoke('process-video', {
+        body: { videoId: data.id },
+      });
+      if (fnErr) {
+        showToast(fnErr.message);
+        await supabase.from('videos').update({ status: 'failed' }).eq('id', data.id);
+      } else {
+        showToast(opts.mode === 'studio' ? 'Studio clips ready!' : 'Clips ready!');
+      }
+      await refresh();
+    },
+    [profile, markChecklist, refresh, showToast],
+  );
 
-  async function unlockDna() {
+  const unlockDna = useCallback(async () => {
     if (!profile) return;
     if (!profile.tiktok_connected) {
-      showToast('Connect TikTok in Settings first');
+      showToast('Connect TikTok in Settings → Connections first');
       setPage('settings');
       return;
     }
@@ -329,45 +423,98 @@ export default function AppShell() {
     await markChecklist('dna');
     showToast('DNA Profile unlocked');
     await refresh();
-  }
+  }, [profile, dna.length, markChecklist, refresh, showToast]);
+
+  const isPaid = profile ? profile.plan !== 'free' : false;
+  const minutesLeft = profile ? profile.minutes_limit - profile.minutes_used : 0;
+  const checklist = profile?.checklist_done ?? {};
+  const doneCount = ['first_video', 'connected', 'first_post', 'dna'].filter((k) => checklist[k]).length;
 
   if (session === null || session === undefined) {
     return <div className="gate-loading">Loading…</div>;
   }
   if (!session) return <SigninGate />;
 
-  const minutesLeft = profile ? profile.minutes_limit - profile.minutes_used : 0;
-  const checklist = profile?.checklist_done ?? {};
+  const planName = profile ? PLANS[profile.plan].name.toUpperCase() : 'FREE';
 
   return (
-    <div className="shell">
+    <div className="shell v2">
       <aside className="sidebar">
         <div className="logo side-logo">
-          <span className="logo-mark">◉</span> CLOUDNIVO
+          <span className="logo-mark zlogo">C</span> Cloudnivo
         </div>
+        <button className="ws-link" onClick={() => setPage('home')}>
+          ‹ All Workspaces
+        </button>
         <nav>
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              className={`side-link${page === n.id ? ' on' : ''}`}
-              onClick={() => setPage(n.id)}
-            >
-              <span className="side-ic">{n.icon}</span> {n.label}
+          <div className="nav-group">CREATE</div>
+          {(
+            [
+              ['clips', 'Clips', '✂'],
+              ['studio', 'Studio', '🎞'],
+              ['posts', 'Posts', '🗓'],
+            ] as const
+          ).map(([id, label, icon]) => (
+            <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
+              <span className="side-ic">{icon}</span> {label}
+            </button>
+          ))}
+          <div className="nav-group">GROW</div>
+          {(
+            [
+              ['brand', 'Brand', '◈'],
+              ['dna', 'DNA Profile', '✦'],
+              ['analytics', 'Analytics', '📊'],
+              ['campaigns', 'Campaigns', '📣'],
+            ] as const
+          ).map(([id, label, icon]) => (
+            <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
+              <span className="side-ic">{icon}</span> {label}
+            </button>
+          ))}
+          <div className="nav-group">ACCOUNT</div>
+          {(
+            [
+              ['billing', 'Billing', '💳'],
+              ['settings', 'Settings', '⚙'],
+            ] as const
+          ).map(([id, label, icon]) => (
+            <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
+              <span className="side-ic">{icon}</span> {label}
             </button>
           ))}
         </nav>
-        <div className="side-foot">
-          {profile && (
-            <>
-              <UsageBar used={profile.minutes_used} total={profile.minutes_limit} label="Minutes" />
-              <UsageBar
-                used={profile.studio_clips_used}
-                total={profile.studio_clips_limit}
-                label="Studio clips"
+
+        <button className="gs-pill" onClick={() => setPage('home')}>
+          Getting started · {doneCount}/4
+        </button>
+
+        {profile && (
+          <div className="plan-card">
+            <div className="plan-card-head">
+              <span>{planName} PLAN</span>
+              <strong>{minutesLeft} min left</strong>
+            </div>
+            <div className="sp-track">
+              <div
+                className="sp-fill"
+                style={{
+                  width: `${profile.minutes_limit ? Math.min(100, Math.round((profile.minutes_used / profile.minutes_limit) * 100)) : 0}%`,
+                }}
               />
-              <div className="side-plan">{PLANS[profile.plan].name} plan</div>
-            </>
-          )}
+            </div>
+            <em className="plan-resets">Resets {resetLabel()}</em>
+            <p>
+              {minutesLeft} free minutes left this month (20 minimum per video). Upgrade for more, no
+              watermark &amp; analytics.
+            </p>
+            <button className="btn btn-purple sm wide" onClick={() => setPage('billing')}>
+              ⚡ Upgrade Plan
+            </button>
+          </div>
+        )}
+
+        <div className="side-foot">
           <a className="side-link" href="#/">
             ← Back to site
           </a>
@@ -380,6 +527,7 @@ export default function AppShell() {
           >
             Sign out
           </button>
+          <div className="side-legal">Terms · Privacy · DMCA</div>
         </div>
       </aside>
 
@@ -387,333 +535,141 @@ export default function AppShell() {
         {toast && <div className="toast">{toast}</div>}
 
         {page === 'home' && profile && (
-          <div className="page-pad">
-            <h2 className="app-h">Welcome back, {profile.display_name ?? 'creator'} 👋</h2>
-            <p className="app-sub">Your getting-started checklist and latest clips.</p>
-            <div className="checklist">
-              {[
-                ['first_video', 'Make your first clips', 'Paste a YouTube link in Clips.'],
-                ['connected', 'Connect TikTok or YouTube', 'Do it in Settings → Connections.'],
-                ['first_post', 'Post or schedule a clip', 'Pick your best score and ship it.'],
-                ['dna', 'Unlock your DNA Profile', 'Analyze your TikToks to find patterns.'],
-              ].map(([k, t, d]) => (
-                <div className={`check-item${checklist[k] ? ' done' : ''}`} key={k}>
-                  <span className="check-box">{checklist[k] ? '✓' : ''}</span>
-                  <div>
-                    <strong>{t}</strong>
-                    <p>{d}</p>
-                  </div>
-                  {!checklist[k] && (
-                    <button
-                      className="btn btn-outline sm"
-                      onClick={() => setPage(k === 'connected' ? 'settings' : k === 'dna' ? 'dna' : k === 'first_post' ? 'clips' : 'clips')}
-                    >
-                      Start
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            <h3 className="app-h3">Top clips</h3>
-            {clips.length === 0 && <p className="app-sub">No clips yet — paste a video in Clips.</p>}
-            <div className="clip-grid">
-              {clips.slice(0, 4).map((c) => (
-                <ClipCardView key={c.id} clip={c} onPost={setPostClip} />
-              ))}
-            </div>
-          </div>
+          <HomePage
+            profile={profile}
+            clips={clips}
+            checklist={checklist}
+            doneCount={doneCount}
+            onNav={(p) => setPage(p)}
+            onPost={setPostClip}
+          />
         )}
 
         {page === 'clips' && profile && (
-          <div className="page-pad">
-            <h2 className="app-h">Clips</h2>
-            <p className="app-sub">
-              Paste a YouTube link or add an upload. Each minute of video uses one minute of your
-              balance (min 20). You have <strong>{minutesLeft}</strong> minutes left.
-            </p>
-            <VideoForm mode="clips" onSubmit={createVideo} />
-            <h3 className="app-h3">Your videos</h3>
-            {videos.filter((v) => v.mode === 'clips').length === 0 && (
-              <p className="app-sub">Nothing yet.</p>
-            )}
-            {videos
-              .filter((v) => v.mode === 'clips')
-              .map((v) => {
-                const vclips = clips.filter((c) => c.video_id === v.id);
-                return (
-                  <div className="video-block" key={v.id}>
-                    <div className="video-head">
-                      <strong>{v.title}</strong>
-                      <span className={`status s-${v.status}`}>{v.status}</span>
-                    </div>
-                    {vclips.length > 0 && (
-                      <div className="clip-grid">
-                        {vclips.map((c) => (
-                          <ClipCardView key={c.id} clip={c} onPost={setPostClip} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
+          <ClipsPage
+            profile={profile}
+            videos={videos}
+            clips={clips}
+            minutesLeft={minutesLeft}
+            whoseOpen={whoseOpen}
+            setWhoseOpen={setWhoseOpen}
+            onCreate={createVideo}
+            onPost={setPostClip}
+            onUpgrade={() => setPage('billing')}
+          />
         )}
 
         {page === 'studio' && profile && (
-          <div className="page-pad">
-            <h2 className="app-h">Studio</h2>
-            <p className="app-sub">
-              Pick a mode and template, upload, and every moment Studio finds renders itself. You
-              have <strong>{profile.studio_clips_limit - profile.studio_clips_used}</strong> Studio
-              clips left on {PLANS[profile.plan].name}.
-            </p>
-            <VideoForm mode="studio" onSubmit={createVideo} />
-            {videos
-              .filter((v) => v.mode === 'studio')
-              .map((v) => {
-                const vclips = clips.filter((c) => c.video_id === v.id);
-                return (
-                  <div className="video-block" key={v.id}>
-                    <div className="video-head">
-                      <strong>{v.title}</strong>
-                      <span className={`status s-${v.status}`}>{v.status}</span>
-                    </div>
-                    {vclips.length > 0 && (
-                      <div className="clip-grid">
-                        {vclips.map((c) => (
-                          <ClipCardView key={c.id} clip={c} onPost={setPostClip} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
+          <StudioPage
+            profile={profile}
+            videos={videos}
+            clips={clips}
+            onCreate={createVideo}
+            onPost={setPostClip}
+          />
         )}
 
         {page === 'posts' && (
           <div className="page-pad">
-            <h2 className="app-h">Posts</h2>
-            <p className="app-sub">Everything you have posted or scheduled, newest first.</p>
-            {posts.length === 0 && <p className="app-sub">No posts yet.</p>}
-            <div className="post-list">
-              {posts.map((p) => {
-                const clip = clips.find((c) => c.id === p.clip_id);
-                return (
-                  <div className="post-row" key={p.id}>
-                    <div>
-                      <strong>{clip?.title?.slice(0, 48) ?? 'Clip'}…</strong>
-                      <span className="post-meta">
-                        {p.platform} · {new Date(p.scheduled_for).toLocaleString()}
-                      </span>
-                    </div>
-                    {p.status === 'posted' ? (
-                      <span className="post-stats">
-                        ▶ {p.views.toLocaleString()} views · ♥ {p.likes.toLocaleString()}
-                      </span>
-                    ) : (
-                      <div className="post-actions">
-                        <button
-                          className="btn btn-outline sm"
-                          onClick={async () => {
-                            await supabase.from('posts').delete().eq('id', p.id);
-                            refresh();
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          className="btn btn-purple sm"
-                          onClick={async () => {
-                            const views = 900 + Math.floor(Math.random() * 60000);
-                            await supabase
-                              .from('posts')
-                              .update({
-                                status: 'posted',
-                                scheduled_for: new Date().toISOString(),
-                                views,
-                                likes: Math.floor(views * 0.08),
-                              })
-                              .eq('id', p.id);
-                            if (clip)
-                              await supabase
-                                .from('clips')
-                                .update({ posted_at: new Date().toISOString(), platform: p.platform })
-                                .eq('id', clip.id);
-                            await markChecklist('first_post');
-                            refresh();
-                          }}
-                        >
-                          Post now
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {page === 'dna' && (
-          <div className="page-pad">
-            <h2 className="app-h">DNA Profile</h2>
-            <p className="app-sub">
-              What actually works for your audience — measured from your posts, not guessed.
-            </p>
-            {dna.length === 0 ? (
-              <div className="dna-empty">
-                <p>
-                  Analyze at least 2 of your TikToks to unlock your profile. Free, about a minute
-                  each. Requires a connected TikTok account.
-                </p>
-                <button className="btn btn-purple" onClick={unlockDna}>
-                  Analyze my TikToks
+            {!isPaid ? (
+              <div className="paygate">
+                <h3>Posting is a paid feature</h3>
+                <p>Post and schedule to TikTok and YouTube — up to 15 posts a day, depending on your plan.</p>
+                <button className="btn btn-purple" onClick={() => setPage('billing')}>
+                  Upgrade your plan
                 </button>
               </div>
             ) : (
-              <div className="dna-cols">
-                {(['hook', 'category', 'visual'] as const).map((cat) => (
-                  <div className="dna-col" key={cat}>
-                    <div className="sp-title">{cat.toUpperCase()} PERFORMANCE</div>
-                    {dna
-                      .filter((d) => d.category === cat)
-                      .map((d) => (
-                        <div className="sp-row" key={d.id}>
-                          <span>{d.label}</span>
-                          <div className="sp-track">
-                            <div className="sp-fill" style={{ width: `${d.score}%` }} />
-                          </div>
-                          <em>{d.score}</em>
-                        </div>
-                      ))}
-                  </div>
-                ))}
-              </div>
+              <PostsList posts={posts} clips={clips} markChecklist={markChecklist} refresh={refresh} />
             )}
           </div>
         )}
 
-        {page === 'analytics' && (
+        {page === 'brand' && profile && (
+          <BrandPage profile={profile} isPaid={isPaid} onSaved={setProfile} showToast={showToast} />
+        )}
+
+        {page === 'dna' && (
+          <DnaPage dna={dna} profile={profile} onUnlock={unlockDna} onUpgrade={() => setPage('billing')} />
+        )}
+
+        {page === 'analytics' && profile && (
+          <AnalyticsPage
+            profile={profile}
+            posts={posts}
+            isPaid={isPaid}
+            onNav={(p) => setPage(p)}
+            showToast={showToast}
+          />
+        )}
+
+        {page === 'campaigns' && (
           <div className="page-pad">
-            <h2 className="app-h">Analytics</h2>
-            <p className="app-sub">Performance from your connected accounts, updated continuously.</p>
-            {posts.filter((p) => p.status === 'posted').length === 0 ? (
-              <p className="app-sub">Post a clip to start collecting performance data.</p>
-            ) : (
-              <>
-                <div className="stats-row app-stats">
-                  {['tiktok', 'youtube', 'reels'].map((pl) => {
-                    const ps = posts.filter((p) => p.status === 'posted' && p.platform === pl);
-                    const views = ps.reduce((a, p) => a + p.views, 0);
-                    const likes = ps.reduce((a, p) => a + p.likes, 0);
-                    return (
-                      <div className="stat" key={pl}>
-                        <div className="stat-v">{views.toLocaleString()}</div>
-                        <div className="stat-l">
-                          {pl} views · {ps.length} posts · {likes.toLocaleString()} likes
-                        </div>
-                      </div>
-                    );
-                  })}
+            <div className="page-head-row">
+              <div>
+                <h2 className="app-h">Campaigns</h2>
+                <p className="app-sub">
+                  Get paid per million views for videos you post on your own account.
+                </p>
+              </div>
+              <a
+                className="lnk"
+                onClick={(e) => {
+                  e.preventDefault();
+                  showToast('Earnings open after your first campaign post');
+                }}
+              >
+                Your earnings
+              </a>
+            </div>
+            <div className="campaign-grid">
+              {CAMPAIGNS.map((c) => (
+                <div className="campaign-card" key={c.title}>
+                  <div className="campaign-art">
+                    <span className="campaign-brand">{c.brand}</span>
+                    <strong>{c.title}</strong>
+                  </div>
+                  <div className="campaign-kind">
+                    {c.kind} <em className="open-chip">Open</em>
+                  </div>
+                  <h3>{c.brand === '@cloudnivo' ? 'Cloudnivo Clipping' : 'Cloudnivo UGC'}</h3>
+                  <div className="campaign-rate">{c.rate}</div>
+                  <div className="campaign-stats">
+                    <div>
+                      <em>Budget left</em>
+                      <strong>{c.budget}</strong>
+                    </div>
+                    <div>
+                      <em>Paid out so far</em>
+                      <strong>{c.paid}</strong>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-purple wide"
+                    onClick={() => showToast('Joined! Post clips with the campaign hashtag to earn.')}
+                  >
+                    Join Campaign
+                  </button>
                 </div>
-                <div className="pub-graph tall">
-                  {posts
-                    .filter((p) => p.status === 'posted')
-                    .slice(0, 14)
-                    .map((p) => (
-                      <span
-                        key={p.id}
-                        style={{ height: `${Math.max(8, Math.round((p.views / 90000) * 100))}%` }}
-                        title={`${p.views} views`}
-                      />
-                    ))}
-                </div>
-              </>
-            )}
+              ))}
+            </div>
           </div>
         )}
 
         {page === 'billing' && profile && (
-          <div className="page-pad">
-            <h2 className="app-h">Billing</h2>
-            <p className="app-sub">
-              You are on <strong>{PLANS[profile.plan].name}</strong>. Unused minutes do not roll
-              over. Cancel anytime.
-            </p>
-            <div className="usage-wrap">
-              <UsageBar used={profile.minutes_used} total={profile.minutes_limit} label="Clipping minutes" />
-              <UsageBar
-                used={profile.studio_clips_used}
-                total={profile.studio_clips_limit}
-                label="Studio clips"
-              />
-            </div>
-            <div className="plans app-plans">
-              {(Object.keys(PLANS) as Array<keyof typeof PLANS>).map((k) => {
-                const plan = PLANS[k];
-                const current = profile.plan === k;
-                return (
-                  <div className={`plan${k === 'pro' ? ' featured' : ''}`} key={k}>
-                    {k === 'pro' && <div className="plan-flag">Most popular</div>}
-                    <h3>{plan.name}</h3>
-                    <div className="plan-price">
-                      <strong>{k === 'free' ? '$0' : k === 'starter' ? '$15' : '$29'}</strong>
-                      <span>/mo</span>
-                    </div>
-                    <ul>
-                      <li>
-                        <span className="li-check">✓</span> {plan.minutes} clipping minutes / mo
-                      </li>
-                      <li>
-                        <span className="li-check">✓</span>{' '}
-                        {plan.studio > 0 ? `${plan.studio} Studio clips / mo` : 'No Studio clips'}
-                      </li>
-                      <li>
-                        <span className="li-check">✓</span>{' '}
-                        {k === 'free' ? 'Cloudnivo watermark' : 'Watermark-free clips'}
-                      </li>
-                    </ul>
-                    <button
-                      className={`btn plan-btn${k === 'pro' ? ' btn-purple' : ' btn-outline'}`}
-                      disabled={current}
-                      onClick={async () => {
-                        await supabase
-                          .from('profiles')
-                          .update({
-                            plan: k,
-                            minutes_limit: plan.minutes,
-                            studio_clips_limit: plan.studio,
-                          })
-                          .eq('id', profile.id);
-                        showToast(`Switched to ${plan.name}`);
-                        refresh();
-                      }}
-                    >
-                      {current ? 'Current plan' : `Switch to ${plan.name}`}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <BillingPage profile={profile} showToast={showToast} refresh={refresh} />
         )}
 
         {page === 'settings' && profile && (
-          <div className="page-pad">
-            <h2 className="app-h">Settings</h2>
-            <SettingsForm
-              profile={profile}
-              onSaved={(p) => {
-                setProfile(p);
-                showToast('Settings saved');
-              }}
-              onConnected={() => {
-                refresh();
-                markChecklist('connected');
-              }}
-            />
-          </div>
+          <SettingsPage
+            profile={profile}
+            onSaved={setProfile}
+            showToast={showToast}
+            onConnected={() => {
+              refresh();
+              markChecklist('connected');
+            }}
+          />
         )}
       </main>
 
@@ -733,177 +689,1203 @@ export default function AppShell() {
   );
 }
 
-/* ---------------- forms ---------------- */
+/* ---------------- pages ---------------- */
 
-function VideoForm({
-  mode,
-  onSubmit,
+function HomePage({
+  profile,
+  clips,
+  checklist,
+  doneCount,
+  onNav,
+  onPost,
 }: {
-  mode: 'clips' | 'studio';
-  onSubmit: (o: {
-    title: string;
-    sourceUrl?: string;
-    sourceType: 'link' | 'upload';
-    mode: 'clips' | 'studio';
-    durationMinutes: number;
-  }) => void;
+  profile: Profile;
+  clips: Clip[];
+  checklist: Record<string, boolean>;
+  doneCount: number;
+  onNav: (p: Page) => void;
+  onPost: (c: Clip) => void;
+}) {
+  const items: Array<[string, string, string, string, Page]> = [
+    ['first_video', 'Make your first clips', 'Turn a long video into short clips in a few minutes.', 'Create clips', 'clips'],
+    ['connected', 'Connect TikTok or YouTube', 'So you can post straight from Cloudnivo and unlock your DNA.', 'Connect', 'settings'],
+    ['first_post', 'Post or schedule a clip', 'Post now or schedule a week ahead — TikTok and YouTube.', checklist.first_post ? 'Go to your clips' : '🔒 Go to your clips', 'clips'],
+    ['dna', 'Unlock your DNA Profile', 'See which hooks and topics go viral for you, then create clips with that recipe.', 'Connect TikTok first', 'dna'],
+  ];
+  return (
+    <div className="page-pad">
+      <div className="home-top">
+        <div className="checklist card">
+          <div className="card-head">
+            <h3>Getting started</h3>
+            <em>{doneCount} of 4 done</em>
+          </div>
+          {items.map(([k, t, d, cta, target], i) => (
+            <div className={`check-item${checklist[k] ? ' done' : ''}`} key={k}>
+              <span className="check-num">{i + 1}</span>
+              <div>
+                <strong>{t}</strong>
+                <p>{d}</p>
+              </div>
+              {!checklist[k] && (
+                <button className="btn btn-outline sm" onClick={() => onNav(target)}>
+                  {cta}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="home-side">
+          <div className="card ws-card">
+            <div className="ws-avatar">M</div>
+            <strong>My Workspace</strong>
+            <p>Welcome back, {profile.display_name ?? 'creator'}.</p>
+          </div>
+          <div className="card discord-card">
+            <strong>Join the Cloudnivo Discord</strong>
+            <p>Support, giveaways, early access &amp; tutorials with other creators.</p>
+            <button className="btn btn-outline sm" onClick={() => onNav('campaigns')}>
+              Join Discord
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="nav-group" style={{ marginTop: 24 }}>
+        QUICK ACTIONS
+      </div>
+      <div className="qa-grid">
+        {(
+          [
+            ['Clips', 'Fast clips from a link or upload', 'clips'],
+            ['Studio', 'Edit your talking-head videos', 'studio'],
+            ['Posts', 'Your posting calendar', 'posts'],
+            ['DNA Profile', 'What goes viral for you', 'dna'],
+            ['Analytics', 'TikTok and YouTube performance', 'analytics'],
+            ['Settings', 'Account, connections, workspace', 'settings'],
+          ] as const
+        ).map(([t, d, p]) => (
+          <button className="qa-card" key={t} onClick={() => onNav(p)}>
+            <strong>{t}</strong>
+            <span>{d}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="nav-group" style={{ marginTop: 24 }}>
+        BRAND ASSETS
+      </div>
+      <div className="card brand-assets">
+        <div className="ws-avatar big">M</div>
+        <div>
+          <strong>Square Logo</strong>
+          <p>Profile / watermark</p>
+        </div>
+        <button className="btn btn-outline sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('brand')}>
+          Generate logo
+        </button>
+      </div>
+
+      <h3 className="app-h3">Top clips</h3>
+      {clips.length === 0 && <p className="app-sub">No clips yet — paste a video in Clips.</p>}
+      <div className="clip-grid">
+        {clips.slice(0, 4).map((c) => (
+          <ClipCardView key={c.id} clip={c} onPost={onPost} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ClipsPage({
+  profile,
+  videos,
+  clips,
+  minutesLeft,
+  whoseOpen,
+  setWhoseOpen,
+  onCreate,
+  onPost,
+  onUpgrade,
+}: {
+  profile: Profile;
+  videos: Video[];
+  clips: Clip[];
+  minutesLeft: number;
+  whoseOpen: boolean;
+  setWhoseOpen: (v: boolean) => void;
+  onCreate: (o: { title: string; sourceUrl?: string; sourceType: 'link' | 'upload'; mode: 'clips' | 'studio'; durationMinutes: number }) => void;
+  onPost: (c: Clip) => void;
+  onUpgrade: () => void;
 }) {
   const [tab, setTab] = useState<'link' | 'upload'>('link');
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [mins, setMins] = useState(45);
+  const [openSet, setOpenSet] = useState<string | null>(null);
+  const [howOpen, setHowOpen] = useState(true);
+
+  if (openSet) {
+    const v = videos.find((x) => x.id === openSet);
+    const vclips = clips.filter((c) => c.video_id === openSet);
+    return (
+      <div className="page-pad">
+        <button className="lnk" onClick={() => setOpenSet(null)}>
+          ← Back
+        </button>
+        <h2 className="app-h">{v?.title}</h2>
+        <p className="app-sub">{vclips.length} clips</p>
+        <div className="set-grid">
+          {vclips.map((c, i) => (
+            <ClipCardView key={c.id} clip={{ ...c, title: `Clip ${i + 1} — ${c.title}` }} onPost={onPost} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="video-form">
-      <div className="tab-row">
-        <button className={`tab${tab === 'link' ? ' on' : ''}`} onClick={() => setTab('link')}>
-          Paste a link
-        </button>
-        <button className={`tab${tab === 'upload' ? ' on' : ''}`} onClick={() => setTab('upload')}>
-          Upload (simulated)
-        </button>
+    <div className="page-pad">
+      <h2 className="app-h">Clips</h2>
+      <p className="app-sub">Fast clips from a link or upload</p>
+      <button className="lnk" onClick={() => setHowOpen((o) => !o)}>
+        ? How Clips works
+      </button>
+      {howOpen && (
+        <div className="how-card">
+          <ol>
+            <li>Paste a link or upload a video.</li>
+            <li>Pick the part to clip and the clip type.</li>
+            <li>Your clips appear here in a few minutes.</li>
+            <li>Open a clip to edit it, or press Post.</li>
+          </ol>
+          <p className="form-note">Tip: Parts mode splits long videos into ~1:30 chapters.</p>
+          <button className="btn btn-ghost sm" onClick={() => setHowOpen(false)}>
+            Got it
+          </button>
+        </div>
+      )}
+
+      <div className="card create-card">
+        <h3>Create a new clip set</h3>
+        <p className="app-sub">Paste a link or upload — AI finds the best moments</p>
+        <div className="tab-row">
+          <button className={`tab${tab === 'link' ? ' on' : ''}`} onClick={() => setTab('link')}>
+            Paste a link
+          </button>
+          <button className={`tab${tab === 'upload' ? ' on' : ''}`} onClick={() => setTab('upload')}>
+            Upload
+          </button>
+          <span className="mins-chip">{minutesLeft} minutes left</span>
+          <span className="mins-chip">{PLANS[profile.plan].name.toUpperCase()} PLAN</span>
+        </div>
+        {tab === 'link' ? (
+          <div className="form-row">
+            <input
+              className="input grow"
+              placeholder="https://youtube.com/watch?v=…"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+            <button
+              className="btn btn-purple"
+              disabled={!url.trim()}
+              onClick={() => {
+                setWhoseOpen(true);
+                onCreate({ title: url.trim().slice(0, 80), sourceUrl: url.trim(), sourceType: 'link', mode: 'clips', durationMinutes: mins });
+              }}
+            >
+              Generate Clips
+            </button>
+          </div>
+        ) : (
+          <div className="form-row">
+            <input className="input" placeholder="Video title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input
+              className="input small"
+              type="number"
+              min={1}
+              max={180}
+              value={mins}
+              onChange={(e) => setMins(Number(e.target.value) || 1)}
+              title="Duration in minutes"
+            />
+            <button
+              className="btn btn-purple"
+              disabled={!title.trim()}
+              onClick={() => onCreate({ title: title.trim(), sourceType: 'upload', mode: 'clips', durationMinutes: mins })}
+            >
+              Generate Clips
+            </button>
+          </div>
+        )}
+        <p className="form-note">
+          Free plan: 1 watermark-free clip a month · 1 left · resets {resetLabel()}. Posting and
+          scheduling are on paid plans.{' '}
+          <a className="lnk" onClick={(e) => { e.preventDefault(); onUpgrade(); }}>
+            Upgrade
+          </a>
+        </p>
       </div>
-      {tab === 'link' ? (
-        <div className="form-row">
+
+      <h3 className="app-h3">Your clip sets</h3>
+      {videos.filter((v) => v.mode === 'clips').length === 0 && (
+        <p className="app-sub">No clips yet — paste a video URL above to generate your first clip set.</p>
+      )}
+      {videos
+        .filter((v) => v.mode === 'clips')
+        .map((v) => {
+          const vclips = clips.filter((c) => c.video_id === v.id);
+          return (
+            <div className="video-block" key={v.id}>
+              <div className="video-head">
+                <strong>{v.title}</strong>
+                <span className={`status s-${v.status}`}>{v.status}</span>
+                {vclips.length > 0 && (
+                  <button className="btn btn-outline sm" onClick={() => setOpenSet(v.id)}>
+                    Explore →
+                  </button>
+                )}
+              </div>
+              {vclips.length > 0 && (
+                <div className="clip-grid">
+                  {vclips.slice(0, 4).map((c) => (
+                    <ClipCardView key={c.id} clip={c} onPost={onPost} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+      {whoseOpen && (
+        <div className="modal-back" onClick={() => setWhoseOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Whose videos will you turn into clips?</h3>
+            <div className="whose-grid">
+              <button className="whose-opt" onClick={() => setWhoseOpen(false)}>
+                <strong>My own videos</strong>
+                <span>I film, stream or podcast my own content</span>
+              </button>
+              <button className="whose-opt" onClick={() => setWhoseOpen(false)}>
+                <strong>Other creators' videos</strong>
+                <span>I clip streams, podcasts or shows made by others</span>
+              </button>
+            </div>
+            <button className="btn btn-ghost sm" onClick={() => setWhoseOpen(false)}>
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StudioPage({
+  profile,
+  videos,
+  clips,
+  onCreate,
+  onPost,
+}: {
+  profile: Profile;
+  videos: Video[];
+  clips: Clip[];
+  onCreate: (o: { title: string; sourceUrl?: string; sourceType: 'link' | 'upload'; mode: 'clips' | 'studio'; durationMinutes: number }) => void;
+  onPost: (c: Clip) => void;
+}) {
+  const [look, setLook] = useState('Explainer');
+  const [style, setStyle] = useState('Blueprint');
+  const [url, setUrl] = useState('');
+  const [mins, setMins] = useState(5);
+  const [instructions, setInstructions] = useState('');
+  const [howOpen, setHowOpen] = useState(false);
+
+  return (
+    <div className="page-pad">
+      <div className="page-head-row">
+        <div>
+          <h2 className="app-h">Cloudnivo Studio</h2>
+          <p className="app-sub">Edit your talking-head videos. Drop them in, pick a look, get finished shorts.</p>
+        </div>
+        <span className="studio-chip">✦ {profile.studio_clips_limit - profile.studio_clips_used} Studio clips</span>
+      </div>
+      <button className="lnk" onClick={() => setHowOpen((o) => !o)}>
+        ? How this works
+      </button>
+      {howOpen && (
+        <div className="how-card">
+          <ol>
+            <li>Drop in one or more talking-head videos (up to 7:00 total).</li>
+            <li>Pick a look — Explainer, Hyper or Classic — and a style.</li>
+            <li>Studio cuts silences, adds captions and designed scenes.</li>
+          </ol>
+          <button className="btn btn-ghost sm" onClick={() => setHowOpen(false)}>
+            Got it
+          </button>
+        </div>
+      )}
+
+      <div className="card create-card">
+        <div className="dropzone">Drop your videos here · or paste a link below · up to 7:00 in total</div>
+        <div className="form-row" style={{ marginTop: 12 }}>
           <input
             className="input grow"
             placeholder="https://youtube.com/watch?v=…"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
-          <button
-            className="btn btn-purple"
-            disabled={!url.trim()}
-            onClick={() =>
-              onSubmit({
-                title: url.trim().slice(0, 80),
-                sourceUrl: url.trim(),
-                sourceType: 'link',
-                mode,
-                durationMinutes: mins,
-              })
-            }
-          >
-            {mode === 'studio' ? 'Run Studio' : 'Get clips'}
-          </button>
-        </div>
-      ) : (
-        <div className="form-row">
-          <input
-            className="input"
-            placeholder="Video title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
           <input
             className="input small"
             type="number"
             min={1}
-            max={180}
+            max={7}
             value={mins}
             onChange={(e) => setMins(Number(e.target.value) || 1)}
-            title="Duration in minutes"
+            title="Minutes"
           />
-          <button
-            className="btn btn-purple"
-            disabled={!title.trim()}
-            onClick={() =>
-              onSubmit({
-                title: title.trim(),
-                sourceType: 'upload',
-                mode,
-                durationMinutes: mins,
-              })
-            }
-          >
-            {mode === 'studio' ? 'Run Studio' : 'Get clips'}
-          </button>
         </div>
+
+        <h4 className="sec-h">Pick a look</h4>
+        <div className="look-grid">
+          {(
+            [
+              ['Explainer', 'Diagrams build on your words. For teaching and explaining.'],
+              ['Hyper', 'Fast cuts, zooms, bold captions and designed scenes. Keeps people watching.'],
+              ['Classic', 'Clean cuts and captions.'],
+            ] as const
+          ).map(([name, desc]) => (
+            <button className={`look-card${look === name ? ' on' : ''}`} key={name} onClick={() => setLook(name)}>
+              <div className="look-art">{name === 'Hyper' ? 'KEY WORD' : name === 'Classic' ? 'clean captions' : '▭ ▭ ▭'}</div>
+              <strong>{name}</strong>
+              <span>{desc}</span>
+            </button>
+          ))}
+        </div>
+        <div className="chip-row">
+          {['Blueprint', 'Paper', 'Neon', 'Brand'].map((s) => (
+            <button className={`pub-chip pick${style === s ? ' on' : ''}`} key={s} onClick={() => setStyle(s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+
+        <div className="brand-row">
+          <span>🏷 Brand library</span>
+          <a className="lnk" onClick={(e) => e.preventDefault()}>
+            Add your brand
+          </a>
+        </div>
+
+        <h4 className="sec-h">Your b-roll for this edit</h4>
+        <div className="dropzone slim">Drop pictures or short videos · up to 10, 50 MB each</div>
+        <p className="form-note">Used only in this edit. To reuse something in every edit, add it to your Brand library.</p>
+
+        <details className="instr">
+          <summary>+ Add instructions (optional)</summary>
+          <textarea
+            className="input"
+            rows={2}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder="e.g. keep the intro, cut the sponsor section"
+          />
+        </details>
+
+        <button
+          className="btn btn-purple big wide"
+          disabled={!url.trim()}
+          onClick={() =>
+            onCreate({
+              title: `${look} · ${style}${instructions ? ` · ${instructions.slice(0, 40)}` : ''}`,
+              sourceUrl: url.trim(),
+              sourceType: 'link',
+              mode: 'studio',
+              durationMinutes: mins,
+            })
+          }
+        >
+          Edit my videos
+        </button>
+        <p className="form-note" style={{ textAlign: 'center' }}>
+          Want to test different hooks?{' '}
+          <a className="lnk" onClick={(e) => e.preventDefault()}>
+            A/B test your videos →
+          </a>
+        </p>
+      </div>
+
+      <div className="nav-group">YOUR VIDEOS</div>
+      {videos.filter((v) => v.mode === 'studio').length === 0 && (
+        <p className="app-sub">Your edited videos show up here. Drop a video above to start.</p>
       )}
-      <p className="form-note">
-        Demo note: clipping runs on a serverless function that simulates the AI pipeline — real
-        video rendering is not performed.
-      </p>
+      {videos
+        .filter((v) => v.mode === 'studio')
+        .map((v) => {
+          const vclips = clips.filter((c) => c.video_id === v.id);
+          return (
+            <div className="video-block" key={v.id}>
+              <div className="video-head">
+                <strong>{v.title}</strong>
+                <span className={`status s-${v.status}`}>{v.status}</span>
+              </div>
+              {vclips.length > 0 && (
+                <div className="clip-grid">
+                  {vclips.map((c) => (
+                    <ClipCardView key={c.id} clip={c} onPost={onPost} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
     </div>
   );
 }
 
-function SettingsForm({
+function PostsList({
+  posts,
+  clips,
+  markChecklist,
+  refresh,
+}: {
+  posts: Post[];
+  clips: Clip[];
+  markChecklist: (k: string) => Promise<void>;
+  refresh: () => Promise<void>;
+}) {
+  return (
+    <>
+      <h2 className="app-h">Posts</h2>
+      <p className="app-sub">Everything you have posted or scheduled, newest first.</p>
+      {posts.length === 0 && <p className="app-sub">No posts yet.</p>}
+      <div className="post-list">
+        {posts.map((p) => {
+          const clip = clips.find((c) => c.id === p.clip_id);
+          return (
+            <div className="post-row" key={p.id}>
+              <div>
+                <strong>{clip?.title?.slice(0, 48) ?? 'Clip'}…</strong>
+                <span className="post-meta">
+                  {p.platform} · {new Date(p.scheduled_for).toLocaleString()}
+                </span>
+              </div>
+              {p.status === 'posted' ? (
+                <span className="post-stats">
+                  ▶ {p.views.toLocaleString()} views · ♥ {p.likes.toLocaleString()}
+                </span>
+              ) : (
+                <div className="post-actions">
+                  <button
+                    className="btn btn-outline sm"
+                    onClick={async () => {
+                      await supabase.from('posts').delete().eq('id', p.id);
+                      refresh();
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-purple sm"
+                    onClick={async () => {
+                      const views = 900 + Math.floor(Math.random() * 60000);
+                      await supabase
+                        .from('posts')
+                        .update({ status: 'posted', scheduled_for: new Date().toISOString(), views, likes: Math.floor(views * 0.08) })
+                        .eq('id', p.id);
+                      if (clip)
+                        await supabase
+                          .from('clips')
+                          .update({ posted_at: new Date().toISOString(), platform: p.platform })
+                          .eq('id', clip.id);
+                      await markChecklist('first_post');
+                      refresh();
+                    }}
+                  >
+                    Post now
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function BrandPage({
   profile,
+  isPaid,
   onSaved,
-  onConnected,
+  showToast,
 }: {
   profile: Profile;
+  isPaid: boolean;
   onSaved: (p: Profile) => void;
-  onConnected: () => void;
+  showToast: (m: string) => void;
 }) {
   const [name, setName] = useState(profile.display_name ?? '');
   const [color, setColor] = useState(profile.brand_color ?? '#8b5cf6');
-  const [font, setFont] = useState(profile.brand_font ?? 'Inter');
+  const [font, setFont] = useState(profile.brand_font ?? 'inter');
   const [cta, setCta] = useState(profile.brand_cta ?? 'Follow for more');
+  const [site, setSite] = useState('');
+  const [showBanner, setShowBanner] = useState(true);
+  const [platforms, setPlatforms] = useState<string[]>(['TikTok', 'YouTube']);
 
-  async function save() {
+  async function saveKit() {
     const { data, error } = await supabase
       .from('profiles')
       .update({ display_name: name, brand_color: color, brand_font: font, brand_cta: cta })
       .eq('id', profile.id)
       .select()
       .single();
-    if (!error && data) onSaved(data as Profile);
+    if (!error && data) {
+      onSaved(data as Profile);
+      showToast('Brand Kit saved');
+    }
   }
 
   return (
-    <div className="settings-grid">
-      <section className="set-card">
-        <h3>Profile</h3>
-        <label className="set-label">Display name</label>
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-        <button className="btn btn-purple sm" onClick={save}>
-          Save profile
+    <div className="page-pad">
+      <h2 className="app-h">Brand</h2>
+      <p className="app-sub">Your pictures, videos, logo and colors, ready for every edit.</p>
+
+      <h3 className="app-h3">Brand library</h3>
+      <p className="app-sub">
+        Your own pictures and short videos. One Click Edit shows them when what you say matches the
+        note, and adds your intro and outro.
+      </p>
+      <div className="card gate-strip">
+        <span>Brand library is part of paid plans. · 0 of 50 items</span>
+        <button className="btn btn-outline sm" onClick={() => showToast('Brand library unlocks on paid plans')}>
+          {isPaid ? '+ Add item' : 'See plans'}
         </button>
-      </section>
-      <section className="set-card">
-        <h3>Connections</h3>
+      </div>
+
+      <h3 className="app-h3">Social banner</h3>
+      <p className="app-sub">Your logos and name on every clip. You can change it for any batch when you make clips.</p>
+      <div className="card gate-strip">
+        <span>Social banners are part of paid plans.</span>
+        <button className="btn btn-outline sm" onClick={() => showToast('Social banners unlock on paid plans')}>
+          See plans
+        </button>
+      </div>
+      <div className="card">
+        <label className="radio">
+          <input type="checkbox" checked={showBanner} onChange={(e) => setShowBanner(e.target.checked)} /> Show on new
+          clips
+        </label>
+        <div className="chip-row wrap">
+          {PLATFORMS.map((p) => (
+            <button
+              key={p}
+              className={`pub-chip pick${platforms.includes(p) ? ' on' : ''}`}
+              onClick={() => setPlatforms((ps) => (ps.includes(p) ? ps.filter((x) => x !== p) : [...ps, p]))}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <label className="set-label">Name to show</label>
+        <input className="input" placeholder="Letters, numbers, spaces and . _ - @ & ' ! only." />
+        <button className="btn btn-purple sm" onClick={() => showToast('Banner saved')}>
+          Save banner
+        </button>
+      </div>
+
+      <h3 className="app-h3">Brand Kit</h3>
+      <p className="app-sub">Visual identity for your content</p>
+      <div className="card">
+        <div className="kit-grid">
+          <div>
+            <label className="set-label">Logo</label>
+            <div className="logo-slot">{profile.display_name?.[0]?.toUpperCase() ?? 'C'}</div>
+            <button className="btn btn-outline sm">Upload logo</button>
+          </div>
+          <div>
+            <label className="set-label">Primary Color</label>
+            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+            <label className="set-label">Font</label>
+            <select className="input" value={font} onChange={(e) => setFont(e.target.value)}>
+              {FONTS.map((f) => (
+                <option key={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="set-label">Brand name</label>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="set-label">Website</label>
+            <input className="input" value={site} onChange={(e) => setSite(e.target.value)} placeholder="cloudnivo.org" />
+            <label className="set-label">CTA Text</label>
+            <input className="input" value={cta} onChange={(e) => setCta(e.target.value)} />
+          </div>
+        </div>
+        <p className="form-note">Explainer edits spell your brand this way and show its logo from this site.</p>
+        <button className="btn btn-purple" onClick={saveKit}>
+          Save Brand Kit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DnaPage({
+  dna,
+  profile,
+  onUnlock,
+  onUpgrade,
+}: {
+  dna: DnaPattern[];
+  profile: Profile | null;
+  onUnlock: () => void;
+  onUpgrade: () => void;
+}) {
+  const [tab, setTab] = useState<'profile' | 'performance' | 'patterns' | 'trends' | 'advisor'>('profile');
+  const connected = profile?.tiktok_connected ?? false;
+
+  return (
+    <div className="page-pad">
+      <h2 className="app-h">DNA Profile</h2>
+      <p className="app-sub">Your content intelligence hub — {dna.length ? 'unlocked' : '0 clips analyzed'}</p>
+
+      <div className="card how-card">
+        <strong>How DNA Profile works</strong>
+        <p>
+          DNA studies the TikToks you've already posted to find what goes viral for your audience — the
+          hooks, topics, tone and visuals behind your best clips.
+        </p>
+        <ul>
+          <li>Profile: what works for you overall</li>
+          <li>Performance: which hooks and tones win</li>
+          <li>Patterns: combinations worth repeating</li>
+          <li>Trends: how you're improving</li>
+          <li>Advisor: ask anything about your strategy</li>
+        </ul>
+        <p className="form-note">Found a winning pattern? Press Use this recipe and Clips will aim for it.</p>
+      </div>
+
+      {!connected ? (
+        <div className="card unlock-steps">
+          <h3>Unlock your DNA Profile</h3>
+          <ol>
+            <li>Connect TikTok</li>
+            <li>Analyze at least 2 of your TikToks below — free, about a minute each · 0 of 2</li>
+            <li>Come back here — your DNA fills in</li>
+          </ol>
+          <button className="btn btn-purple" onClick={onUnlock}>
+            Analyze your clips
+          </button>
+          <p className="form-note">Each analysis sharpens your DNA profile below.</p>
+          <p className="form-note">Connect TikTok to analyze clips →</p>
+        </div>
+      ) : (
+        <>
+          <div className="tab-row">
+            {(
+              [
+                ['profile', 'Profile'],
+                ['performance', 'Performance'],
+                ['patterns', 'Patterns'],
+                ['trends', 'Trends'],
+                ['advisor', 'Advisor'],
+              ] as const
+            ).map(([id, label]) => (
+              <button key={id} className={`tab${tab === id ? ' on' : ''}`} onClick={() => setTab(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {dna.length === 0 ? (
+            <div className="card unlock-steps">
+              <p>Analyze some TikTok clips to unlock your Account DNA.</p>
+              <button className="btn btn-purple" onClick={onUnlock}>
+                Analyze your clips
+              </button>
+            </div>
+          ) : (
+            <>
+              {tab === 'profile' && (
+                <div className="dna-cols">
+                  {(['hook', 'category', 'visual'] as const).map((cat) => (
+                    <div className="dna-col" key={cat}>
+                      <div className="sp-title">{cat.toUpperCase()} PERFORMANCE</div>
+                      {dna
+                        .filter((d) => d.category === cat)
+                        .map((d) => (
+                          <div className="sp-row" key={d.id}>
+                            <span>{d.label}</span>
+                            <div className="sp-track">
+                              <div className="sp-fill" style={{ width: `${d.score}%` }} />
+                            </div>
+                            <em>{d.score}</em>
+                          </div>
+                        ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {tab === 'performance' && (
+                <div className="dna-cols">
+                  {dna
+                    .filter((d) => d.category === 'hook')
+                    .map((d) => (
+                      <div className="sp-row" key={d.id}>
+                        <span>{d.label}</span>
+                        <div className="sp-track">
+                          <div className="sp-fill" style={{ width: `${d.score}%` }} />
+                        </div>
+                        <em>{d.score}</em>
+                      </div>
+                    ))}
+                </div>
+              )}
+              {tab === 'patterns' && (
+                <div className="card">
+                  <p>
+                    Best combo right now: <strong>{dna[0]?.label}</strong> + facecam close-ups. Press{' '}
+                    <a className="lnk" onClick={(e) => e.preventDefault()}>
+                      Use this recipe
+                    </a>{' '}
+                    and Clips will aim for it.
+                  </p>
+                </div>
+              )}
+              {tab === 'trends' && (
+                <div className="card">
+                  <p>Your hook scores improved ~12% over your last 5 posts. Storytime openers are trending up.</p>
+                </div>
+              )}
+              {tab === 'advisor' && (
+                <div className="card">
+                  <p>
+                    Advisor is part of paid plans.{' '}
+                    <a className="lnk" onClick={(e) => { e.preventDefault(); onUpgrade(); }}>
+                      Upgrade to Unlock
+                    </a>
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsPage({
+  profile,
+  posts,
+  isPaid,
+  onNav,
+  showToast,
+}: {
+  profile: Profile;
+  posts: Post[];
+  isPaid: boolean;
+  onNav: (p: Page) => void;
+  showToast: (m: string) => void;
+}) {
+  const [network, setNetwork] = useState<'tiktok' | 'youtube'>('tiktok');
+  const connected = network === 'tiktok' ? profile.tiktok_connected : profile.youtube_connected;
+  const posted = posts.filter((p) => p.status === 'posted' && (network === 'tiktok' ? p.platform === 'tiktok' : p.platform === 'youtube'));
+
+  return (
+    <div className="page-pad">
+      <div className="tab-row">
+        <button className={`tab${network === 'tiktok' ? ' on' : ''}`} onClick={() => setNetwork('tiktok')}>
+          TikTok
+        </button>
+        <button className={`tab${network === 'youtube' ? ' on' : ''}`} onClick={() => setNetwork('youtube')}>
+          YouTube
+        </button>
+      </div>
+      <h2 className="app-h">{network === 'tiktok' ? 'TikTok' : 'YouTube'} Analytics</h2>
+      <p className="app-sub">Performance insights from your {network === 'tiktok' ? 'TikTok' : 'YouTube'} account</p>
+
+      {!connected ? (
+        <div className="card unlock-steps">
+          <h3>{network === 'tiktok' ? "TikTok isn't connected yet" : "YouTube isn't connected yet"}</h3>
+          <p>Sync your analytics automatically and post clips straight from Cloudnivo.</p>
+          <button className="btn btn-purple" onClick={() => onNav('settings')}>
+            Connect {network === 'tiktok' ? 'TikTok' : 'YouTube'}
+          </button>
+        </div>
+      ) : posted.length === 0 ? (
+        <p className="app-sub">Post a clip to start collecting performance data.</p>
+      ) : !isPaid ? (
+        <div className="paygate">
+          <h3>Unlock {network === 'tiktok' ? 'TikTok' : 'YouTube'} Analytics</h3>
+          <p>See exactly how your clips perform — and what to post next.</p>
+          <button className="btn btn-purple" onClick={() => onNav('billing')}>
+            Upgrade to Unlock
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="stats-row app-stats">
+            <div className="stat">
+              <div className="stat-v">{posted.reduce((a, p) => a + p.views, 0).toLocaleString()}</div>
+              <div className="stat-l">views</div>
+            </div>
+            <div className="stat">
+              <div className="stat-v">{posted.reduce((a, p) => a + p.likes, 0).toLocaleString()}</div>
+              <div className="stat-l">likes</div>
+            </div>
+            <div className="stat">
+              <div className="stat-v">{posted.length}</div>
+              <div className="stat-l">posts</div>
+            </div>
+          </div>
+          <div className="pub-graph tall">
+            {posted.slice(0, 14).map((p) => (
+              <span key={p.id} style={{ height: `${Math.max(8, Math.round((p.views / 90000) * 100))}%` }} title={`${p.views} views`} />
+            ))}
+          </div>
+        </>
+      )}
+      <button className="btn btn-outline sm" style={{ marginTop: 12 }} onClick={() => showToast('Analytics sync a few times a day')}>
+        Refresh data
+      </button>
+    </div>
+  );
+}
+
+function BillingPage({
+  profile,
+  showToast,
+  refresh,
+}: {
+  profile: Profile;
+  showToast: (m: string) => void;
+  refresh: () => Promise<void>;
+}) {
+  const [annual, setAnnual] = useState(false);
+  const [family, setFamily] = useState<'creator' | 'influencer' | 'suite'>('creator');
+
+  const families: Record<typeof family, Array<{ key: 'starter' | 'pro'; name: string; desc: string; flag?: string; chips: Array<[string, string]>; features: string[] }>> = {
+    creator: [
+      {
+        key: 'starter',
+        name: 'Cloudnivo Starter',
+        desc: 'Try posting: clip your videos and post the best ones.',
+        chips: [['5', 'TikTok posts / day'], ['200', 'minutes / mo'], ['3', 'Studio clips / mo'], ['1', 'workspace']],
+        features: [
+          'Post and schedule every clip to TikTok & YouTube',
+          'Up to 5 TikTok posts a day per account',
+          'Watermark-free exports',
+          'Brand library: your own pictures, videos, intro and outro in your edits',
+          'Turbo Downloads: clips ready in about 10 seconds',
+          'Long-form videos → AI-graded short clips',
+          'Virality scores & predicted views per clip',
+          'Auto captions & silence cutting',
+          '3 Studio clips a month, each with a Director edit',
+          'TikTok & YouTube analytics',
+          'DNA Profile & AI content advisor',
+          'Email Support',
+        ],
+      },
+      {
+        key: 'pro',
+        name: 'Cloudnivo Pro',
+        desc: 'For weekly clippers posting volume across channels.',
+        flag: 'BEST FOR CLIPPERS',
+        chips: [['10', 'TikTok posts / day'], ['600', 'minutes / mo'], ['3', 'Studio clips / mo'], ['3', 'workspaces']],
+        features: [
+          'Post and schedule every clip to TikTok & YouTube',
+          'Up to 10 TikTok posts a day per account',
+          'Watermark-free exports',
+          'Brand library: your own pictures, videos, intro and outro in your edits',
+          'Turbo Downloads: clips ready in about 10 seconds',
+          'Long-form videos → AI-graded short clips',
+          'Virality scores & predicted views per clip',
+          'Auto captions & silence cutting',
+          '3 Studio clips a month, each with a Director edit',
+          'TikTok & YouTube analytics',
+          'DNA Profile & AI content advisor',
+          'Priority Support',
+        ],
+      },
+    ],
+    influencer: [
+      {
+        key: 'starter',
+        name: 'Creator Starter',
+        desc: 'Get started turning one video into shareable variations.',
+        chips: [['5', 'TikTok posts / day'], ['21', 'Studio clips / mo'], ['1', 'workspace']],
+        features: [
+          'Post and schedule every clip to TikTok & YouTube',
+          'Watermark-free exports',
+          'Brand library',
+          'One video → platform-ready variations',
+          'Studio with Reaction Library & Brand Kit',
+          'TikTok & YouTube analytics',
+          'DNA Profile & AI content advisor',
+          'Email Support',
+        ],
+      },
+      {
+        key: 'pro',
+        name: 'Creator Pro',
+        desc: 'More variations across platforms, ready to scale.',
+        flag: 'RECOMMENDED',
+        chips: [['10', 'TikTok posts / day'], ['60', 'Studio clips / mo'], ['3', 'workspaces']],
+        features: [
+          'Post and schedule every clip to TikTok & YouTube',
+          'Watermark-free exports',
+          'Brand library',
+          'One video → platform-ready variations',
+          'Studio with Reaction Library & Brand Kit',
+          'TikTok & YouTube analytics',
+          'DNA Profile & AI content advisor',
+          'Priority Support',
+        ],
+      },
+    ],
+    suite: [
+      {
+        key: 'starter',
+        name: 'Suite Starter',
+        desc: 'Everything, together — for teams.',
+        chips: [['5', 'TikTok posts / day'], ['600', 'minutes / mo'], ['10', 'Studio clips / mo']],
+        features: ['Everything in Pro', 'Team workspaces', 'Shared brand kits', 'Email Support'],
+      },
+      {
+        key: 'pro',
+        name: 'Suite Pro',
+        desc: 'Everything, together — for teams at volume.',
+        flag: 'BEST VALUE',
+        chips: [['15', 'TikTok posts / day'], ['1800', 'minutes / mo'], ['30', 'Studio clips / mo']],
+        features: ['Everything in Starter', 'Priority Support', 'Campaign payouts', 'API access (soon)'],
+      },
+    ],
+  };
+
+  async function subscribe(key: 'starter' | 'pro') {
+    const plan = PLANS[key];
+    await supabase
+      .from('profiles')
+      .update({ plan: key, minutes_limit: plan.minutes, studio_clips_limit: plan.studio })
+      .eq('id', profile.id);
+    showToast(`${plan.name} applied — Stripe checkout coming soon`);
+    refresh();
+  }
+
+  return (
+    <div className="page-pad">
+      <h2 className="app-h">Choose Your Plan</h2>
+      <p className="app-sub">
+        You're on the <strong>{PLANS[profile.plan].name} plan</strong> — you have{' '}
+        {profile.minutes_limit - profile.minutes_used} free minutes left this month. Pick a plan to post
+        and schedule every clip, watermark-free.
+      </p>
+      <div className="toggle-row">
+        <span>Monthly</span>
+        <button className={`switch${annual ? ' on' : ''}`} onClick={() => setAnnual((a) => !a)} aria-label="Toggle annual" />
+        <span>Annual</span>
+        <em className="save-chip">Save ~20%</em>
+      </div>
+      <div className="tab-row">
         {(
           [
-            ['tiktok_connected', 'TikTok'],
-            ['youtube_connected', 'YouTube'],
+            ['creator', 'Creator', 'Long-form → clips'],
+            ['influencer', 'Influencer', 'One video → variations'],
+            ['suite', 'Suite', 'Everything, together'],
           ] as const
-        ).map(([key, label]) => (
-          <div className="conn-row" key={key}>
-            <span>{label}</span>
-            <button
-              className={`btn sm ${profile[key] ? 'btn-outline' : 'btn-purple'}`}
-              onClick={async () => {
-                await supabase
-                  .from('profiles')
-                  .update({ [key]: !profile[key] })
-                  .eq('id', profile.id);
-                onConnected();
-              }}
-            >
-              {profile[key] ? '✓ Connected' : 'Connect'}
+        ).map(([id, label, sub]) => (
+          <button key={id} className={`tab${family === id ? ' on' : ''}`} onClick={() => setFamily(id)}>
+            <strong>{label}</strong>
+            <em>{sub}</em>
+          </button>
+        ))}
+      </div>
+      <div className="billing-grid">
+        {families[family].map((p) => {
+          const price = p.key === 'starter' ? 15 : 29;
+          const shown = annual ? Math.round(price * 0.8) : price;
+          const current = profile.plan === p.key;
+          return (
+            <div className={`billing-card${p.flag ? ' featured' : ''}`} key={p.name}>
+              {p.flag && <div className="plan-flag">{p.flag}</div>}
+              <h3>{p.name}</h3>
+              <p className="app-sub">{p.desc}</p>
+              <div className="plan-price">
+                <strong>${shown}</strong>
+                <span>/mo</span>
+              </div>
+              <div className="quota-chips">
+                {p.chips.map(([v, l]) => (
+                  <div className="quota-chip" key={l}>
+                    <strong>{v}</strong>
+                    <em>{l}</em>
+                  </div>
+                ))}
+              </div>
+              <ul>
+                {p.features.map((f) => (
+                  <li key={f}>
+                    <span className="li-check">✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                className={`btn plan-btn${p.key === 'pro' ? ' btn-purple' : ' btn-outline'}`}
+                disabled={current}
+                onClick={() => subscribe(p.key)}
+              >
+                {current ? 'Current plan' : 'Subscribe'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <p className="form-note" style={{ textAlign: 'center' }}>
+        Clips uses 1 minute for every minute of video it processes.
+      </p>
+      <p className="form-note" style={{ textAlign: 'center' }}>
+        🔒 Secure payment via Stripe · Cancel anytime
+      </p>
+    </div>
+  );
+}
+
+function SettingsPage({
+  profile,
+  onSaved,
+  showToast,
+  onConnected,
+}: {
+  profile: Profile;
+  onSaved: (p: Profile) => void;
+  showToast: (m: string) => void;
+  onConnected: () => void;
+}) {
+  const [tab, setTab] = useState<'account' | 'workspace' | 'connections' | 'reactions'>('account');
+  const [name, setName] = useState(profile.display_name ?? '');
+  const [emailsOn, setEmailsOn] = useState(true);
+  const [emotion, setEmotion] = useState('Funny');
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ''));
+  }, []);
+
+  return (
+    <div className="page-pad">
+      <h2 className="app-h">Settings</h2>
+      <p className="app-sub">Manage your workspace</p>
+      <div className="tab-row">
+        {(
+          [
+            ['account', 'Account'],
+            ['workspace', 'Workspace'],
+            ['connections', 'Connections'],
+            ['reactions', 'Reaction Library'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} className={`tab${tab === id ? ' on' : ''}`} onClick={() => setTab(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'account' && (
+        <div className="nav-group">ACCOUNT</div>
+      )}
+      {tab === 'account' && (
+        <div className="card">
+          <label className="set-label">Email</label>
+          <div className="readonly">{email || 'signed in'}</div>
+          <label className="set-label">Plan</label>
+          <div className="plan-chip">{PLANS[profile.plan].name.toUpperCase()} · {profile.minutes_limit - profile.minutes_used} min left</div>
+          <a className="lnk" onClick={(e) => { e.preventDefault(); showToast('Manage subscription opens Stripe (soon)'); }}>
+            Manage subscription →
+          </a>
+          <label className="set-label" style={{ marginTop: 16 }}>Emails</label>
+          <div className="conn-row">
+            <span>Email me when my clips are ready</span>
+            <button className={`switch${emailsOn ? ' on' : ''}`} onClick={() => setEmailsOn((v) => !v)} aria-label="Toggle emails" />
+          </div>
+        </div>
+      )}
+
+      {tab === 'workspace' && (
+        <div className="card">
+          <label className="set-label">Workspace name</label>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+          <button
+            className="btn btn-purple sm"
+            onClick={async () => {
+              const { data, error } = await supabase
+                .from('profiles')
+                .update({ display_name: name })
+                .eq('id', profile.id)
+                .select()
+                .single();
+              if (!error && data) {
+                onSaved(data as Profile);
+                showToast('Workspace saved');
+              }
+            }}
+          >
+            Save
+          </button>
+        </div>
+      )}
+
+      {tab === 'connections' && (
+        <>
+          <div className="nav-group">CONNECTIONS</div>
+          <div className="card">
+            {(
+              [
+                ['tiktok_connected', 'TikTok'],
+                ['youtube_connected', 'YouTube'],
+              ] as const
+            ).map(([key, label]) => (
+              <div className="conn-row" key={key}>
+                <span>{label}</span>
+                <em className="conn-state">{profile[key] ? 'Connected' : 'Not connected'}</em>
+                <button
+                  className={`btn sm ${profile[key] ? 'btn-outline' : 'btn-purple'}`}
+                  onClick={async () => {
+                    await supabase.from('profiles').update({ [key]: !profile[key] }).eq('id', profile.id);
+                    onConnected();
+                  }}
+                >
+                  {profile[key] ? '✓ Connected' : 'Connect'}
+                </button>
+              </div>
+            ))}
+            <p className="form-note">Connecting an account lets Cloudnivo sync your analytics and post clips on your behalf.</p>
+          </div>
+        </>
+      )}
+
+      {tab === 'reactions' && (
+        <>
+          <div className="page-head-row">
+            <div>
+              <h3 className="app-h3">Reaction Library</h3>
+              <p className="app-sub">Manage your reaction media by emotion</p>
+            </div>
+            <button className="btn btn-purple sm" onClick={() => showToast('Reaction uploads are part of paid plans')}>
+              + Add Media
             </button>
           </div>
-        ))}
-        <p className="form-note">Demo connections — no real OAuth handshake is performed.</p>
-      </section>
-      <section className="set-card">
-        <h3>Brand Kit</h3>
-        <label className="set-label">Brand color</label>
-        <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-        <label className="set-label">Font</label>
-        <select className="input" value={font} onChange={(e) => setFont(e.target.value)}>
-          <option>Inter</option>
-          <option>Georgia</option>
-          <option>Menlo</option>
-        </select>
-        <label className="set-label">End-of-clip CTA text</label>
-        <input className="input" value={cta} onChange={(e) => setCta(e.target.value)} />
-        <button className="btn btn-purple sm" onClick={save}>
-          Save brand kit
-        </button>
-      </section>
+          <div className="chip-row wrap">
+            {EMOTIONS.map((em) => (
+              <button key={em} className={`pub-chip pick${emotion === em ? ' on' : ''}`} onClick={() => setEmotion(em)}>
+                {em}
+              </button>
+            ))}
+          </div>
+          <div className="card empty-state">No media for “{emotion.toLowerCase()}” yet.</div>
+        </>
+      )}
     </div>
   );
 }
