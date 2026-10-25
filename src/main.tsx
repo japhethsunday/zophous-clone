@@ -54,7 +54,7 @@ function Nav() {
     <header className="nav-wrap">
       <nav className="nav">
         <a className="logo" href="#top">
-          <span className="logo-mark">◉</span> ZOPHOUS
+          <span className="logo-mark">◉</span> CLOUDNIVO
         </a>
         <div className="nav-links">
           <a href="#top">Home</a>
@@ -213,7 +213,7 @@ function OneUpload() {
         One long video, <span className="serif">a whole library</span>
       </h2>
       <p className="sub">
-        Paste a link to a podcast, stream, or webinar, and Zophous returns a batch of captioned,
+        Paste a link to a podcast, stream, or webinar, and Cloudnivo returns a batch of captioned,
         scored, ready-to-post clips.
       </p>
       <div className="library-visual">
@@ -251,7 +251,7 @@ const DNA_STEPS = [
   { n: '01', t: 'Paste a link', d: 'Any long video: a YouTube link, podcast, stream or webinar.' },
   { n: '02', t: 'AI clips what performs', d: "It cuts the moments your audience is most likely to watch." },
   { n: '03', t: 'You post', d: 'Captioned, vertical, ready for TikTok, Reels & Shorts.' },
-  { n: '04', t: 'Zophous learns', d: "Every clip's performance feeds your viral DNA profile." },
+  { n: '04', t: 'Cloudnivo learns', d: "Every clip's performance feeds your viral DNA profile." },
   { n: '05', t: 'Sharper next time', d: 'The next batch is tuned to what actually worked for you.' },
 ];
 
@@ -263,7 +263,7 @@ function ViralDna() {
         Every clip builds your <span className="serif">viral DNA</span>
       </h2>
       <p className="sub">
-        Most tools just cut clips. Zophous learns from every post, building a profile of what your
+        Most tools just cut clips. Cloudnivo learns from every post, building a profile of what your
         audience rewards, so each upload is sharper than the last.
       </p>
       <div className="dna-grid">
@@ -466,12 +466,12 @@ function Features() {
   );
 }
 
-/* ---------- why zophous ---------- */
+/* ---------- why cloudnivo ---------- */
 
-function WhyZophous() {
+function WhyCloudnivo() {
   return (
     <section className="section" id="why">
-      <Eyebrow>Why Zophous</Eyebrow>
+      <Eyebrow>Why Cloudnivo</Eyebrow>
       <h2>
         Smarter clips, <span className="serif">and 2× the minutes</span>.
       </h2>
@@ -487,7 +487,7 @@ function WhyZophous() {
           <div className="compare-row">Manual posting</div>
         </div>
         <div className="compare-col us">
-          <div className="compare-head">Zophous</div>
+          <div className="compare-head">Cloudnivo</div>
           <div className="compare-row">300+ minutes / mo — 2× the minutes</div>
           <div className="compare-row">Viral DNA learns every post</div>
           <div className="compare-row">Schedule &amp; post in one place</div>
@@ -531,7 +531,7 @@ function WhoFor() {
 const FAQS = [
   {
     q: 'Do I keep the rights to my clips?',
-    a: "Zophous never claims ownership of your content. You keep whatever rights you bring, and we never resell or repost it. You're responsible for having the rights to what you upload or clip: clipping content you don't own, without permission or a valid fair-use basis, can infringe the original creator's copyright.",
+    a: "Cloudnivo never claims ownership of your content. You keep whatever rights you bring, and we never resell or repost it. You're responsible for having the rights to what you upload or clip: clipping content you don't own, without permission or a valid fair-use basis, can infringe the original creator's copyright.",
   },
   {
     q: 'What video formats and lengths work?',
@@ -547,7 +547,7 @@ const FAQS = [
   },
   {
     q: 'Is there really a free plan?',
-    a: 'Yes. The Free plan gives you 60 clipping minutes every month, with AI clips, captions and hooks. Spend them on one long video or split them across up to three shorter ones (each video uses a minimum of 20 minutes). Clips carry a Zophous watermark, and you can make 1 clip a month watermark-free. No credit card required, and new subscribers get a 30-day money-back guarantee.',
+    a: 'Yes. The Free plan gives you 60 clipping minutes every month, with AI clips, captions and hooks. Spend them on one long video or split them across up to three shorter ones (each video uses a minimum of 20 minutes). Clips carry a Cloudnivo watermark, and you can make 1 clip a month watermark-free. No credit card required, and new subscribers get a 30-day money-back guarantee.',
   },
 ];
 
@@ -599,7 +599,7 @@ function Testimonial() {
 const PLANS = [
   {
     name: 'Free',
-    tagline: 'Try Zophous on real videos, every month.',
+    tagline: 'Try Cloudnivo on real videos, every month.',
     price: '$0',
     per: '/mo',
     badge: 'Free forever',
@@ -609,7 +609,7 @@ const PLANS = [
       'Engagement heatmap to pick your best window',
       '1 Workspace',
       '2 Turbo Downloads a month',
-      'Zophous watermark on clips',
+      'Cloudnivo watermark on clips',
     ],
     cta: 'Start for free',
     featured: false,
@@ -736,14 +736,14 @@ function AboutPage() {
         Built for creators, <span className="serif">by creators.</span>
       </h2>
       <p className="sub">
-        Zophous started with a simple obsession: why does creating viral content take so long? We
+        Cloudnivo started with a simple obsession: why does creating viral content take so long? We
         built the tool we wished existed. Every creator deserves the same editing power that big
         studios have. AI should do the grunt work. You should focus on creating.
       </p>
       <div className="audience-grid" style={{ marginTop: 40 }}>
         {[
           ['✦ Simplicity First', 'We strip away complexity so creators can focus on what they do best: creating. Every feature earns its place.'],
-          ['⚡ Speed is a Feature', "Waiting kills momentum. We obsess over making Zophous faster at every step, from upload to export."],
+          ['⚡ Speed is a Feature', "Waiting kills momentum. We obsess over making Cloudnivo faster at every step, from upload to export."],
           ['🤝 Creator-Led', "We build with creators, not for them. Every decision starts with the question: does this make a creator's life easier?"],
           ['🔍 Radical Transparency', 'We share our roadmap, our mistakes, and our wins openly. Trust is built through honesty, not polish.'],
         ].map(([t, d]) => (
@@ -757,7 +757,7 @@ function AboutPage() {
         Hi, I'm <span className="serif">Daniel McCord.</span>
       </h2>
       <p className="sub">
-        I started Zophous because when I was beginning my entrepreneurial journey, there was no
+        I started Cloudnivo because when I was beginning my entrepreneurial journey, there was no
         guide. Around that time I started my podcast, Dmac Pods, and one problem kept surfacing:
         creating viral clips was eating hours I didn't have as a college student. With a background
         in computer science, I built a product that automatically finds and edits viral clips.
@@ -772,8 +772,8 @@ function AboutPage() {
       </h2>
       <div className="dna-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 40 }}>
         {[
-          ['Spring 2023', 'The Idea is Born', 'Zophous began as a business plan generator for aspiring entrepreneurs.'],
-          ['Fall 2024', 'Pivot to Clips', 'Manual clip editing ate my podcast hours — so Zophous pivoted to AI clipping.'],
+          ['Spring 2023', 'The Idea is Born', 'Cloudnivo began as a business plan generator for aspiring entrepreneurs.'],
+          ['Fall 2024', 'Pivot to Clips', 'Manual clip editing ate my podcast hours — so Cloudnivo pivoted to AI clipping.'],
           ['Fall 2025', 'Public Launch', 'Officially launched to the public, and never stopped improving.'],
         ].map(([when, t, d]) => (
           <div className="dna-card" key={t}>
@@ -795,12 +795,12 @@ function CommunityPage() {
         Create better content, <span className="serif">together.</span>
       </h2>
       <p className="sub">
-        Our Discord is the heart of Zophous. Thousands of creators share tips, get support, and
+        Our Discord is the heart of Cloudnivo. Thousands of creators share tips, get support, and
         celebrate wins every day.
       </p>
       <div className="features-grid" style={{ marginTop: 44 }}>
         {[
-          ['🛟', 'Direct Support', 'Get help directly from the Zophous team and experienced community members.'],
+          ['🛟', 'Direct Support', 'Get help directly from the Cloudnivo team and experienced community members.'],
           ['🎁', 'Exclusive Giveaways', 'Regular giveaways for free minutes, premium features, and more.'],
           ['🎓', 'Tutorials & Tips', 'Exclusive tutorials, workflow tips, and content-creation strategies.'],
           ['🚀', 'Early Access', 'Be the first to try new features and shape the product with feedback.'],
@@ -820,15 +820,15 @@ function LegalPage({ kind }: { kind: 'terms' | 'privacy' | 'dmca' }) {
   const copy: Record<string, [string, string]> = {
     terms: [
       'Terms of Service',
-      "Zophous never claims ownership of your content. You keep whatever rights you bring, and we never resell or repost it. You're responsible for having the rights to what you upload or clip: clipping content you don't own, without permission or a valid fair-use basis, can infringe the original creator's copyright. Plans are month-to-month, minutes reset monthly and do not roll over, and new subscribers get a 30-day money-back guarantee.",
+      "Cloudnivo never claims ownership of your content. You keep whatever rights you bring, and we never resell or repost it. You're responsible for having the rights to what you upload or clip: clipping content you don't own, without permission or a valid fair-use basis, can infringe the original creator's copyright. Plans are month-to-month, minutes reset monthly and do not roll over, and new subscribers get a 30-day money-back guarantee.",
     ],
     privacy: [
       'Privacy Policy',
-      'We collect the minimum data needed to run your studio: your account email, the videos and clips you create, and performance data from accounts you explicitly connect. We use essential and analytics cookies to run and improve Zophous. We never sell your data, and you can delete your account and data at any time from Settings.',
+      'We collect the minimum data needed to run your studio: your account email, the videos and clips you create, and performance data from accounts you explicitly connect. We use essential and analytics cookies to run and improve Cloudnivo. We never sell your data, and you can delete your account and data at any time from Settings.',
     ],
     dmca: [
       'DMCA Policy',
-      'Zophous responds to valid DMCA takedown notices. If you believe content on Zophous infringes your copyright, send a notice identifying the work, the allegedly infringing material, and your contact information. Repeat infringers lose access. You are responsible for having the rights to what you clip.',
+      'Cloudnivo responds to valid DMCA takedown notices. If you believe content on Cloudnivo infringes your copyright, send a notice identifying the work, the allegedly infringing material, and your contact information. Repeat infringers lose access. You are responsible for having the rights to what you clip.',
     ],
   };
   const [title, body] = copy[kind];
@@ -886,7 +886,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <a className="logo" href="#top">
-          <span className="logo-mark">◉</span> ZOPHOUS
+          <span className="logo-mark">◉</span> CLOUDNIVO
         </a>
         <div className="footer-links">
           <a href="#/about">About</a>
@@ -897,7 +897,7 @@ function Footer() {
           <a href="#/privacy">Privacy</a>
           <a href="#/dmca">DMCA</a>
         </div>
-        <p>© 2026 Zophous. Turn long videos into daily shorts.</p>
+        <p>© 2026 Cloudnivo. Turn long videos into daily shorts.</p>
       </div>
     </footer>
   );
@@ -947,7 +947,7 @@ function Landing() {
         <Stats />
         <PublishTrack />
         <Features />
-        <WhyZophous />
+        <WhyCloudnivo />
         <WhoFor />
         <Faq />
         <Testimonial />

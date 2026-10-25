@@ -1,0 +1,17 @@
+Vercel CLI 59.1.3 (Node.js 24.19.0)
+Loading teams…
+
+  Directory       ~\.verdent\verdent-projects\youtube rea\dist
+
+Searching for existing projects…
+
+✓ Linked          recksgreen-1232s-projects/dist
+Deploying recksgreen-1232s-projects/dist
+Uploading [--------------------] (0.0B/516.5KB)
+Uploading [=====---------------] (144.9KB/516.5KB)
+Uploading [==========----------] (272.9KB/516.5KB)
+Uploading [===============-----] (400.9KB/516.5KB)
+Uploading [====================] (516.5KB/516.5KB)
+  Inspect         https://vercel.com/recksgreen-1232s-projects/dist/5p77CvbNhdMf79Uw6fmfnXnKQDcC
+  Production      https://dist-iplpszaxr-recksgreen-1232s-projects.vercel.app
+https://dist-iplpszaxr-recksgreen-1232s-projects.vercel.appBuilding…

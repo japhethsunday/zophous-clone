@@ -43,7 +43,7 @@ function SigninGate() {
     <div className="gate">
       <div className="gate-card">
         <div className="logo" style={{ justifyContent: 'center', fontSize: '1rem' }}>
-          <span className="logo-mark">◉</span> ZOPHOUS
+          <span className="logo-mark">◉</span> CLOUDNIVO
         </div>
         <h2>Sign in to your studio</h2>
         <p className="sub left" style={{ margin: '12px 0 22px' }}>
@@ -100,7 +100,7 @@ function ClipCardView({
           <ScoreBadge score={clip.score} />
         </div>
         <div className="clip-caption">{clip.title}</div>
-        {clip.watermarked && <div className="wm">◉ ZOPHOUS</div>}
+        {clip.watermarked && <div className="wm">◉ CLOUDNIVO</div>}
       </div>
       <div className="app-clip-meta">
         <div className="app-clip-times">
@@ -343,7 +343,7 @@ export default function AppShell() {
     <div className="shell">
       <aside className="sidebar">
         <div className="logo side-logo">
-          <span className="logo-mark">◉</span> ZOPHOUS
+          <span className="logo-mark">◉</span> CLOUDNIVO
         </div>
         <nav>
           {NAV.map((n) => (
@@ -671,7 +671,7 @@ export default function AppShell() {
                       </li>
                       <li>
                         <span className="li-check">✓</span>{' '}
-                        {k === 'free' ? 'Zophous watermark' : 'Watermark-free clips'}
+                        {k === 'free' ? 'Cloudnivo watermark' : 'Watermark-free clips'}
                       </li>
                     </ul>
                     <button
