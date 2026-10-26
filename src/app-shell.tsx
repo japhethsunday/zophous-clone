@@ -4,11 +4,15 @@ import {
   supabase,
   PLANS,
   fmtTime,
+  ensureWorkspace,
   type Profile,
   type Video,
   type Clip,
   type DnaPattern,
   type Post,
+  type Manager,
+  type ShortformJob,
+  type ShortformVariation,
 } from './lib/supabase';
 
 /* ---------------- helpers ---------------- */
@@ -311,6 +315,9 @@ export default function AppShell() {
   const [postClip, setPostClip] = useState<Clip | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [whoseOpen, setWhoseOpen] = useState(false);
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [sfJobs, setSfJobs] = useState<ShortformJob[]>([]);
+  const [sfVars, setSfVars] = useState<ShortformVariation[]>([]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -321,18 +328,27 @@ export default function AppShell() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
     const uid = userData.user.id;
-    const [p, v, c, po, d] = await Promise.all([
+    const [p, v, c, po, d, mj, sv] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).single(),
       supabase.from('videos').select('*').order('created_at', { ascending: false }),
       supabase.from('clips').select('*').order('score', { ascending: false }),
       supabase.from('posts').select('*').order('scheduled_for', { ascending: false }),
       supabase.from('dna_patterns').select('*').order('score', { ascending: false }),
+      supabase.from('shortform_jobs').select('*').order('created_at', { ascending: false }),
+      supabase.from('shortform_variations').select('*').order('created_at', { ascending: true }),
     ]);
     if (p.data) setProfile(p.data as Profile);
     if (v.data) setVideos(v.data as Video[]);
     if (c.data) setClips(c.data as Clip[]);
     if (po.data) setPosts(po.data as Post[]);
     if (d.data) setDna(d.data as DnaPattern[]);
+    if (mj.data) setSfJobs(mj.data as ShortformJob[]);
+    if (sv.data) setSfVars(sv.data as ShortformVariation[]);
+    try {
+      setManagers(await ensureWorkspace(uid));
+    } catch {
+      /* workspace load is non-fatal */
+    }
   }, []);
 
   useEffect(() => {
@@ -403,6 +419,105 @@ export default function AppShell() {
       await refresh();
     },
     [profile, markChecklist, refresh, showToast],
+  );
+
+  const createShortformJob = useCallback(
+    async (opts: { url: string; look: string; style: string; instructions: string; minutes: number; autoEdit: boolean }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user || !profile) return;
+      if (profile.plan === 'free') {
+        showToast('Studio is part of paid plans — upgrade in Billing');
+        setPage('billing');
+        return;
+      }
+      const uid = userData.user.id;
+      const ws = managers[0]?.id ?? null;
+      const { data: job, error } = await supabase
+        .from('shortform_jobs')
+        .insert({
+          user_id: uid,
+          workspace_id: ws,
+          mode: 'creator',
+          kind: 'test',
+          title: opts.url.slice(0, 80),
+          status: 'analyzing',
+          test_config: {
+            look: opts.look,
+            style: opts.style,
+            instructions: opts.instructions || null,
+            duration_minutes: opts.minutes,
+          },
+          auto_edit: opts.autoEdit,
+          videos: 1,
+        })
+        .select()
+        .single();
+      if (error || !job) {
+        showToast(error?.message ?? 'Could not start the studio job');
+        return;
+      }
+      const parts = ['hook', 'body', 'outro'].map((role, i) => ({
+        job_id: job.id,
+        user_id: uid,
+        role,
+        position: i,
+        content: opts.instructions || `Auto ${role} pass — ${opts.look} look, ${opts.style} style`,
+      }));
+      const { data: insertedParts, error: partsErr } = await supabase
+        .from('shortform_test_parts')
+        .insert(parts)
+        .select();
+      if (partsErr || !insertedParts) {
+        await supabase.from('shortform_jobs').delete().eq('id', job.id);
+        showToast(partsErr?.message ?? 'Could not build the test parts');
+        return;
+      }
+      const totalSec = Math.max(60, opts.minutes * 60);
+      const moments = [0, 1, 2].map((i) => ({
+        job_id: job.id,
+        user_id: uid,
+        rank: i,
+        strength: [92, 78, 64][i],
+        label: ['Strong claim + payoff', 'Story turn', 'Rapid-fire list'][i],
+        transcript: `${opts.look} segment ${i + 1}`,
+        start_seconds: Math.round((totalSec / 3) * i),
+        end_seconds: Math.round((totalSec / 3) * (i + 1)),
+      }));
+      const letters = ['A', 'B'];
+      const hooks = [
+        `The ${opts.look.toLowerCase()} trick nobody tells you about`,
+        `I tested ${opts.style.toLowerCase()} editing — here's what happened`,
+      ];
+      const variations = letters.map((letter, i) => ({
+        job_id: job.id,
+        user_id: uid,
+        body_part_id: insertedParts[Math.min(i, insertedParts.length - 1)].id,
+        variation_letter: letter,
+        status: 'ready' as const,
+        hook_text: hooks[i],
+        topic_title: `${opts.look} · Variation ${letter}`,
+        duration_ms: Math.round((totalSec / letters.length) * 1000),
+        combo_index: i,
+        template_index: i,
+        auto_edited_at: opts.autoEdit ? new Date().toISOString() : null,
+      }));
+      const [mErr, vErr] = await Promise.all([
+        supabase.from('shortform_moments').insert(moments).then((r) => r.error),
+        supabase.from('shortform_variations').insert(variations).then((r) => r.error),
+      ]);
+      if (mErr || vErr) {
+        showToast((mErr ?? vErr)?.message ?? 'Could not finish the studio job');
+        return;
+      }
+      await supabase.from('shortform_jobs').update({ status: 'ready' }).eq('id', job.id);
+      await supabase
+        .from('profiles')
+        .update({ current_credits: Math.max(0, (profile.current_credits ?? 0) - opts.minutes) })
+        .eq('id', profile.id);
+      showToast(`Studio job ready — ${letters.length} variations generated`);
+      await refresh();
+    },
+    [profile, managers, refresh, showToast],
   );
 
   const unlockDna = useCallback(async () => {
@@ -538,6 +653,7 @@ export default function AppShell() {
           <HomePage
             profile={profile}
             clips={clips}
+            workspaceName={managers[0]?.name ?? 'My Workspace'}
             checklist={checklist}
             doneCount={doneCount}
             onNav={(p) => setPage(p)}
@@ -562,10 +678,9 @@ export default function AppShell() {
         {page === 'studio' && profile && (
           <StudioPage
             profile={profile}
-            videos={videos}
-            clips={clips}
-            onCreate={createVideo}
-            onPost={setPostClip}
+            jobs={sfJobs}
+            variations={sfVars}
+            onCreate={createShortformJob}
           />
         )}
 
@@ -694,6 +809,7 @@ export default function AppShell() {
 function HomePage({
   profile,
   clips,
+  workspaceName,
   checklist,
   doneCount,
   onNav,
@@ -701,6 +817,7 @@ function HomePage({
 }: {
   profile: Profile;
   clips: Clip[];
+  workspaceName: string;
   checklist: Record<string, boolean>;
   doneCount: number;
   onNav: (p: Page) => void;
@@ -737,8 +854,8 @@ function HomePage({
         </div>
         <div className="home-side">
           <div className="card ws-card">
-            <div className="ws-avatar">M</div>
-            <strong>My Workspace</strong>
+            <div className="ws-avatar">{workspaceName[0]?.toUpperCase() ?? 'M'}</div>
+            <strong>{workspaceName}</strong>
             <p>Welcome back, {profile.display_name ?? 'creator'}.</p>
           </div>
           <div className="card discord-card">
@@ -984,16 +1101,14 @@ function ClipsPage({
 
 function StudioPage({
   profile,
-  videos,
-  clips,
+  jobs,
+  variations,
   onCreate,
-  onPost,
 }: {
   profile: Profile;
-  videos: Video[];
-  clips: Clip[];
-  onCreate: (o: { title: string; sourceUrl?: string; sourceType: 'link' | 'upload'; mode: 'clips' | 'studio'; durationMinutes: number }) => void;
-  onPost: (c: Clip) => void;
+  jobs: ShortformJob[];
+  variations: ShortformVariation[];
+  onCreate: (o: { url: string; look: string; style: string; instructions: string; minutes: number; autoEdit: boolean }) => void;
 }) {
   const [look, setLook] = useState('Explainer');
   const [style, setStyle] = useState('Blueprint');
@@ -1098,11 +1213,12 @@ function StudioPage({
           disabled={!url.trim()}
           onClick={() =>
             onCreate({
-              title: `${look} · ${style}${instructions ? ` · ${instructions.slice(0, 40)}` : ''}`,
-              sourceUrl: url.trim(),
-              sourceType: 'link',
-              mode: 'studio',
-              durationMinutes: mins,
+              url: url.trim(),
+              look,
+              style,
+              instructions,
+              minutes: mins,
+              autoEdit: true,
             })
           }
         >
@@ -1116,30 +1232,48 @@ function StudioPage({
         </p>
       </div>
 
-      <div className="nav-group">YOUR VIDEOS</div>
-      {videos.filter((v) => v.mode === 'studio').length === 0 && (
+      <div className="nav-group">YOUR STUDIO JOBS</div>
+      {jobs.length === 0 && (
         <p className="app-sub">Your edited videos show up here. Drop a video above to start.</p>
       )}
-      {videos
-        .filter((v) => v.mode === 'studio')
-        .map((v) => {
-          const vclips = clips.filter((c) => c.video_id === v.id);
-          return (
-            <div className="video-block" key={v.id}>
-              <div className="video-head">
-                <strong>{v.title}</strong>
-                <span className={`status s-${v.status}`}>{v.status}</span>
-              </div>
-              {vclips.length > 0 && (
-                <div className="clip-grid">
-                  {vclips.map((c) => (
-                    <ClipCardView key={c.id} clip={c} onPost={onPost} />
-                  ))}
-                </div>
-              )}
+      {jobs.map((job) => {
+        const cfg = (job.test_config ?? {}) as { look?: string; style?: string };
+        const jvars = variations.filter((v) => v.job_id === job.id);
+        return (
+          <div className="video-block" key={job.id}>
+            <div className="video-head">
+              <strong>
+                {cfg.look ?? 'Studio'} · {cfg.style ?? 'Edit'}
+              </strong>
+              <span className={`status s-${job.status}`}>{job.status}</span>
+              <em className="mins-chip">A/B test · {jvars.length} variations</em>
             </div>
-          );
-        })}
+            {jvars.length > 0 && (
+              <div className="clip-grid">
+                {jvars.map((v) => (
+                  <div className="app-clip" key={v.id}>
+                    <div className="app-clip-screen" style={{ aspectRatio: '9/16' }}>
+                      <div className="clip-top">
+                        <span className="clip-src">VARIATION {v.variation_letter}</span>
+                        <ScoreBadge score={92 - v.combo_index * 5} />
+                      </div>
+                      <div className="clip-caption">{v.hook_text ?? v.topic_title}</div>
+                      <div className="clip-views">
+                        {v.duration_ms ? fmtTime(Math.round(v.duration_ms / 1000)) : '—'}
+                      </div>
+                      {v.auto_edited_at && <div className="wm">✦ auto-edited</div>}
+                    </div>
+                    <div className="app-clip-meta">
+                      <div className="app-clip-times">{v.topic_title}</div>
+                      <span className={`status s-${v.status}`}>{v.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1243,6 +1377,27 @@ function BrandPage({
       .single();
     if (!error && data) {
       onSaved(data as Profile);
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        const kit = {
+          user_id: userData.user.id,
+          brand_name: name,
+          primary_color: color,
+          font_choice: font,
+          cta_text: cta,
+        };
+        const { data: existing } = await supabase
+          .from('brand_kits')
+          .select('id')
+          .eq('user_id', userData.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (existing && existing.length > 0) {
+          await supabase.from('brand_kits').update(kit).eq('id', existing[0].id);
+        } else {
+          await supabase.from('brand_kits').insert(kit);
+        }
+      }
       showToast('Brand Kit saved');
     }
   }

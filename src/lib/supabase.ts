@@ -39,6 +39,8 @@ export type Profile = {
   tiktok_connected: boolean;
   youtube_connected: boolean;
   checklist_done: Record<string, boolean>;
+  current_credits?: number;
+  onboarded_at?: string | null;
 };
 
 export type Video = {
@@ -92,6 +94,82 @@ export const PLANS = {
   starter: { name: 'Creator Starter', minutes: 200, studio: 3 },
   pro: { name: 'Creator Pro', minutes: 600, studio: 3 },
 } as const;
+
+/* ---------------- real Zophous model (workspaces + shortform pipeline) ---------------- */
+
+export type Manager = {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+};
+
+export type ShortformJob = {
+  id: string;
+  user_id: string;
+  workspace_id: string | null;
+  mode: string;
+  kind: string;
+  title: string | null;
+  status: 'pending' | 'analyzing' | 'ready' | 'failed';
+  test_config: Record<string, unknown>;
+  auto_edit: boolean;
+  videos: number;
+  created_at: string;
+};
+
+export type ShortformMoment = {
+  id: string;
+  job_id: string;
+  rank: number;
+  strength: number;
+  label: string;
+  transcript: string | null;
+  start_seconds: number;
+  end_seconds: number;
+};
+
+export type ShortformVariation = {
+  id: string;
+  job_id: string;
+  variation_letter: string;
+  status: 'pending' | 'ready' | 'failed';
+  hook_text: string | null;
+  topic_title: string | null;
+  duration_ms: number | null;
+  combo_index: number;
+  template_index: number;
+  auto_edited_at: string | null;
+  created_at: string;
+};
+
+export type BrandKit = {
+  id: string;
+  user_id: string;
+  brand_name: string | null;
+  primary_color: string | null;
+  font_choice: string | null;
+  cta_text: string | null;
+  logo_url: string | null;
+};
+
+/** Ensure the signed-in user has at least one workspace (mirrors the real app). */
+export async function ensureWorkspace(userId: string): Promise<Manager[]> {
+  const { data, error } = await supabase
+    .from('managers')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  if (data && data.length > 0) return data as Manager[];
+  const { data: created, error: insErr } = await supabase
+    .from('managers')
+    .insert({ user_id: userId, name: 'My Workspace' })
+    .select()
+    .single();
+  if (insErr) throw insErr;
+  return [created as Manager];
+}
 
 export function fmtTime(s: number) {
   const m = Math.floor(s / 60);
