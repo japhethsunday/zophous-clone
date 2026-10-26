@@ -40,6 +40,8 @@ export type Profile = {
   youtube_connected: boolean;
   checklist_done: Record<string, boolean>;
   current_credits?: number;
+  credits_balance: number;
+  credits_limit: number;
   onboarded_at?: string | null;
 };
 
@@ -89,11 +91,61 @@ export type Post = {
   likes: number;
 };
 
+export type Generation = {
+  id: string;
+  user_id: string;
+  kind: 'video' | 'image';
+  model: string;
+  prompt: string;
+  format_key: string | null;
+  aspect: string;
+  duration_seconds: number | null;
+  resolution: string;
+  style: string | null;
+  provider: string | null;
+  provider_job_id: string | null;
+  status: 'queued' | 'processing' | 'ready' | 'failed';
+  result_url: string | null;
+  thumb_url: string | null;
+  credit_cost: number;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type PromptPreset = {
+  id: string;
+  category: string;
+  title: string;
+  prompt: string;
+  format_key: string | null;
+  aspect: string;
+  sort: number;
+};
+
+export type ScriptItem = {
+  id: string;
+  user_id: string;
+  topic: string;
+  tone: string;
+  duration_seconds: number;
+  content: string;
+  created_at: string;
+};
+
 export const PLANS = {
-  free: { name: 'Free', minutes: 60, studio: 0 },
-  starter: { name: 'Creator Starter', minutes: 200, studio: 3 },
-  pro: { name: 'Creator Pro', minutes: 600, studio: 3 },
+  free: { name: 'Free', minutes: 60, studio: 0, credits: 50 },
+  starter: { name: 'Creator Starter', minutes: 200, studio: 3, credits: 200 },
+  pro: { name: 'Creator Pro', minutes: 600, studio: 3, credits: 500 },
 } as const;
+
+/** Mirrors the creditCost() table in the generate-media Edge Function. */
+export function creditCostFor(kind: 'video' | 'image', resolution: string, durationSeconds: number | null): number {
+  if (kind === 'image') return 3;
+  const base = resolution === '1080p' ? 32 : 16;
+  const spans = Math.max(1, Math.ceil((durationSeconds ?? 5) / 5));
+  return base * spans;
+}
 
 /* ---------------- real Zophous model (workspaces + shortform pipeline) ---------------- */
 

@@ -5,6 +5,7 @@ import {
   PLANS,
   fmtTime,
   ensureWorkspace,
+  creditCostFor,
   type Profile,
   type Video,
   type Clip,
@@ -13,6 +14,9 @@ import {
   type Manager,
   type ShortformJob,
   type ShortformVariation,
+  type Generation,
+  type PromptPreset,
+  type ScriptItem,
 } from './lib/supabase';
 
 /* ---------------- helpers ---------------- */
@@ -84,6 +88,7 @@ type Page =
   | 'home'
   | 'clips'
   | 'studio'
+  | 'gen'
   | 'posts'
   | 'brand'
   | 'dna'
@@ -297,6 +302,476 @@ function PostModal({
             {busy ? 'Working…' : when === 'now' ? 'Post now' : 'Schedule'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- gen studio (real AI generation via Edge Functions) ---------------- */
+
+const GEN_MODELS = [
+  { id: 'seedance-fast', name: 'Seedance Lite', kind: 'video', tag: 'Fast vertical clips', accent: '#38BDF8' },
+  { id: 'seedance-pro', name: 'Seedance Pro', kind: 'video', tag: 'Richer motion detail', accent: '#7C5CFF' },
+  { id: 'kling-2.1', name: 'Kling 2.1', kind: 'video', tag: 'Cinematic realism', accent: '#F472B6' },
+  { id: 'gpt-image', name: 'GPT Image', kind: 'image', tag: 'Poster-grade stills', accent: '#FBBF24' },
+] as const;
+
+const GEN_ASPECTS = ['9:16', '16:9', '1:1'] as const;
+
+const GEN_TONES = ['energetic', 'dramatic', 'funny', 'calm'] as const;
+
+/** Pull the structured error body out of a failed functions.invoke. */
+async function readFnError(e: unknown): Promise<{ code: string; message: string }> {
+  const ctx = (e as { context?: { json?: () => Promise<Record<string, unknown>> } })?.context;
+  if (ctx?.json) {
+    try {
+      const j = await ctx.json();
+      return {
+        code: String(j.error ?? 'request_failed'),
+        message: String(j.message ?? j.error ?? 'Generation request failed'),
+      };
+    } catch {
+      /* fall through to generic message */
+    }
+  }
+  return { code: 'request_failed', message: e instanceof Error ? e.message : 'Generation request failed' };
+}
+
+function GenPage({
+  profile,
+  showToast,
+  refresh,
+}: {
+  profile: Profile;
+  showToast: (m: string) => void;
+  refresh: () => Promise<void>;
+}) {
+  const [tab, setTab] = useState<'create' | 'scripts'>('create');
+  const [gens, setGens] = useState<Generation[] | null>(null);
+  const [prompts, setPrompts] = useState<PromptPreset[]>([]);
+  const [scripts, setScripts] = useState<ScriptItem[] | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [modelId, setModelId] = useState<string>(GEN_MODELS[0].id);
+  const [aspect, setAspect] = useState<string>('9:16');
+  const [resolution, setResolution] = useState<string>('720p');
+  const [durationSeconds, setDuration] = useState(5);
+  const [formatKey, setFormatKey] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [topic, setTopic] = useState('');
+  const [tone, setTone] = useState<string>(GEN_TONES[0]);
+  const [scriptLen, setScriptLen] = useState(30);
+  const [scriptBusy, setScriptBusy] = useState(false);
+
+  const model = GEN_MODELS.find((m) => m.id === modelId) ?? GEN_MODELS[0];
+  const cost = creditCostFor(model.kind, resolution, model.kind === 'video' ? durationSeconds : null);
+  const creditsLeft = profile.credits_balance ?? 0;
+  const creditsLimit = profile.credits_limit ?? 0;
+
+  const load = useCallback(async () => {
+    const [g, pl, sc] = await Promise.all([
+      supabase.from('generations').select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('prompt_library').select('*').order('sort', { ascending: true }),
+      supabase.from('scripts').select('*').order('created_at', { ascending: false }).limit(30),
+    ]);
+    setGens((g.data ?? []) as Generation[]);
+    setPrompts((pl.data ?? []) as PromptPreset[]);
+    setScripts((sc.data ?? []) as ScriptItem[]);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Poll in-flight Replicate jobs so status + result land without a manual reload.
+  useEffect(() => {
+    const active = (gens ?? []).filter((g) => g.status === 'processing' && g.kind === 'video');
+    if (active.length === 0) return;
+    const t = setInterval(async () => {
+      for (const g of active) {
+        const { data, error } = await supabase.functions.invoke('generate-media', {
+          body: { mode: 'check', id: g.id },
+        });
+        if (!error && data?.generation) {
+          const updated = data.generation as Generation;
+          setGens((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)));
+          if (updated.status === 'ready') {
+            showToast('Generation ready — your video is in the history below');
+            void refresh();
+          } else if (updated.status === 'failed') {
+            showToast(`Generation failed: ${updated.error ?? 'provider error'} — credits refunded`);
+            void refresh();
+          }
+        }
+      }
+    }, 6000);
+    return () => clearInterval(t);
+  }, [gens, showToast, refresh]);
+
+  const last7 = useMemo(() => {
+    const days: { label: string; credits: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const next = new Date(d);
+      next.setDate(next.getDate() + 1);
+      const credits = (gens ?? [])
+        .filter((g) => {
+          const t = new Date(g.created_at);
+          return t >= d && t < next && g.status !== 'failed';
+        })
+        .reduce((s, g) => s + g.credit_cost, 0);
+      days.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), credits });
+    }
+    return days;
+  }, [gens]);
+  const peak = Math.max(20, ...last7.map((d) => d.credits));
+
+  const generate = useCallback(async () => {
+    if (!prompt.trim()) {
+      showToast('Describe what to generate first');
+      return;
+    }
+    if (creditsLeft < cost) {
+      showToast(`Not enough credits — this render costs ${cost}, you have ${creditsLeft}. Upgrade in Billing.`);
+      return;
+    }
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke('generate-media', {
+      body: {
+        mode: 'create',
+        kind: model.kind,
+        model: model.id,
+        prompt: prompt.trim(),
+        aspect,
+        resolution,
+        durationSeconds: model.kind === 'video' ? durationSeconds : undefined,
+        formatKey,
+      },
+    });
+    setBusy(false);
+    if (error) {
+      showToast((await readFnError(error)).message);
+      return;
+    }
+    const gen = (data as { generation?: Generation }).generation;
+    if (!gen) {
+      showToast('Generation could not be created — try again');
+      return;
+    }
+    setGens((prev) => [gen, ...(prev ?? [])]);
+    showToast(
+      gen.status === 'ready'
+        ? `${model.name} ready — ${cost} credits used`
+        : `${model.name} is rendering — it will appear below when done`,
+    );
+    setPrompt('');
+    await refresh();
+  }, [prompt, creditsLeft, cost, model, aspect, resolution, durationSeconds, formatKey, showToast, refresh]);
+
+  const writeScript = useCallback(async () => {
+    if (!topic.trim()) {
+      showToast('Give the script a topic first');
+      return;
+    }
+    setScriptBusy(true);
+    const { data, error } = await supabase.functions.invoke('write-script', {
+      body: { topic: topic.trim(), tone, durationSeconds: scriptLen },
+    });
+    setScriptBusy(false);
+    if (error) {
+      showToast((await readFnError(error)).message);
+      return;
+    }
+    const s = (data as { script?: ScriptItem }).script;
+    if (!s) {
+      showToast('Could not write the script — try again');
+      return;
+    }
+    setScripts((prev) => [s, ...(prev ?? [])]);
+    showToast('Script ready');
+  }, [topic, tone, scriptLen, showToast]);
+
+  const usePreset = (p: PromptPreset) => {
+    setPrompt(p.prompt);
+    setAspect(p.aspect);
+    setFormatKey(p.format_key);
+    setTab('create');
+  };
+
+  const usagePct = creditsLimit > 0 ? Math.round(((creditsLimit - creditsLeft) / creditsLimit) * 100) : 0;
+
+  return (
+    <div className="gen-page">
+      <div className="page-head-row">
+        <div>
+          <h2 className="app-h gen-h">AI Studio</h2>
+          <p className="gen-sub">Generate real video, images and scripts — powered by credits.</p>
+        </div>
+        <span className="gen-credits-pill">
+          ⚡ {creditsLeft} credits left
+        </span>
+      </div>
+
+      <div className="gen-stats">
+        <div className="gen-stat">
+          <em>Credits</em>
+          <strong>
+            {creditsLeft}
+            <span> / {creditsLimit}</span>
+          </strong>
+          <i className="gen-delta">{usagePct}% used</i>
+          <div className="gen-track">
+            <div className="gen-track-fill" style={{ width: `${Math.min(100, usagePct)}%` }} />
+          </div>
+        </div>
+        <div className="gen-stat">
+          <em>Generations</em>
+          <strong>{gens?.length ?? 0}</strong>
+          <i className="gen-delta up">all time</i>
+        </div>
+        <div className="gen-stat">
+          <em>Models online</em>
+          <strong>{GEN_MODELS.length}</strong>
+          <i className="gen-delta up">video · image</i>
+        </div>
+        <div className="gen-stat">
+          <em>Plan</em>
+          <strong className="gen-stat-plan">{PLANS[profile.plan].name}</strong>
+          <i className="gen-delta">{PLANS[profile.plan].credits} credits / mo</i>
+        </div>
+      </div>
+
+      <div className="gen-tabs">
+        <button className={`gen-tab${tab === 'create' ? ' on' : ''}`} onClick={() => setTab('create')}>
+          Create
+        </button>
+        <button className={`gen-tab${tab === 'scripts' ? ' on' : ''}`} onClick={() => setTab('scripts')}>
+          Scriptwriter
+        </button>
+      </div>
+
+      {tab === 'create' && (
+        <>
+          <div className="gen-grid">
+            <div className="gen-panel gen-composer">
+              <div className="gen-panel-head">
+                <h3>What are we creating today?</h3>
+                <span className="gen-kind">
+                  {model.kind === 'video' ? 'Video' : 'Image'} · {cost} cr
+                </span>
+              </div>
+              <textarea
+                className="gen-input"
+                rows={3}
+                placeholder="Describe the shot — subject, motion, lighting, mood…"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+              />
+              <div className="gen-opt-row">
+                <span className="gen-opt-label">Model</span>
+                {GEN_MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`gen-opt${m.id === modelId ? ' on' : ''}`}
+                    onClick={() => setModelId(m.id)}
+                    title={m.tag}
+                  >
+                    <span className="gen-model-dot" style={{ background: m.accent }} /> {m.name}
+                  </button>
+                ))}
+              </div>
+              {model.kind === 'video' && (
+                <div className="gen-opt-row">
+                  <span className="gen-opt-label">Length</span>
+                  {[5, 10].map((d) => (
+                    <button
+                      key={d}
+                      className={`gen-opt sm${durationSeconds === d ? ' on' : ''}`}
+                      onClick={() => setDuration(d)}
+                    >
+                      {d}s
+                    </button>
+                  ))}
+                  <span className="gen-opt-label" style={{ marginLeft: 12 }}>
+                    Quality
+                  </span>
+                  {['720p', '1080p'].map((r) => (
+                    <button
+                      key={r}
+                      className={`gen-opt sm${resolution === r ? ' on' : ''}`}
+                      onClick={() => setResolution(r)}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="gen-opt-row">
+                <span className="gen-opt-label">Aspect</span>
+                {GEN_ASPECTS.map((a) => (
+                  <button
+                    key={a}
+                    className={`gen-opt sm${aspect === a ? ' on' : ''}`}
+                    onClick={() => setAspect(a)}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+              <div className="gen-composer-foot">
+                <span className="gen-eta">{busy ? 'Starting…' : `${cost} credits · ${model.name}`}</span>
+                <button className="gen-btn" disabled={busy} onClick={generate}>
+                  {busy ? 'Starting…' : 'Generate'}
+                </button>
+              </div>
+            </div>
+
+            <div className="gen-panel gen-usage">
+              <div className="gen-panel-head">
+                <h3>Credit usage</h3>
+                <span className="gen-kind">last 7 days</span>
+              </div>
+              <div className="gen-chart">
+                {last7.map((d) => (
+                  <div key={d.label} className="gen-chart-col">
+                    <div className="gen-chart-bar-wrap">
+                      <div
+                        className="gen-chart-bar"
+                        style={{ height: `${Math.max(4, (d.credits / peak) * 100)}%` }}
+                      />
+                    </div>
+                    <span>{d.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <h3 className="gen-sec-h">Viral formats &amp; presets — tap to use</h3>
+          <div className="gen-presets">
+            {prompts.map((p) => (
+              <button key={p.id} className="gen-preset" onClick={() => usePreset(p)} title={p.prompt}>
+                <em>{p.category}</em>
+                <strong>{p.title}</strong>
+                <span>{p.aspect}</span>
+              </button>
+            ))}
+            {prompts.length === 0 && <div className="gen-empty">Loading formats…</div>}
+          </div>
+        </>
+      )}
+
+      {tab === 'scripts' && (
+        <div className="gen-grid">
+          <div className="gen-panel gen-composer">
+            <div className="gen-panel-head">
+              <h3>Write a short-form script</h3>
+              <span className="gen-kind">GPT · {scriptLen}s</span>
+            </div>
+            <textarea
+              className="gen-input"
+              rows={2}
+              placeholder="Topic — e.g. why most creators quit at 300 followers"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+            <div className="gen-opt-row">
+              <span className="gen-opt-label">Tone</span>
+              {GEN_TONES.map((tn) => (
+                <button
+                  key={tn}
+                  className={`gen-opt sm${tone === tn ? ' on' : ''}`}
+                  onClick={() => setTone(tn)}
+                >
+                  {tn}
+                </button>
+              ))}
+              <span className="gen-opt-label" style={{ marginLeft: 12 }}>
+                Length
+              </span>
+              {[15, 30, 60].map((l) => (
+                <button
+                  key={l}
+                  className={`gen-opt sm${scriptLen === l ? ' on' : ''}`}
+                  onClick={() => setScriptLen(l)}
+                >
+                  {l}s
+                </button>
+              ))}
+            </div>
+            <div className="gen-composer-foot">
+              <span className="gen-eta">{scriptBusy ? 'Writing…' : 'Hook-first, beat-by-beat'}</span>
+              <button className="gen-btn" disabled={scriptBusy} onClick={writeScript}>
+                {scriptBusy ? 'Writing…' : 'Write script'}
+              </button>
+            </div>
+          </div>
+          <div className="gen-panel gen-usage">
+            <div className="gen-panel-head">
+              <h3>Your scripts</h3>
+              <span className="gen-kind">latest first</span>
+            </div>
+            <div className="gen-scripts">
+              {scripts === null && <div className="gen-empty">Loading…</div>}
+              {scripts !== null && scripts.length === 0 && (
+                <div className="gen-empty">No scripts yet — write your first one.</div>
+              )}
+              {scripts?.map((s) => (
+                <details key={s.id} className="gen-script">
+                  <summary>
+                    <strong>{s.topic}</strong>
+                    <span>
+                      {s.tone} · {s.duration_seconds}s ·{' '}
+                      {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </summary>
+                  <pre>{s.content}</pre>
+                </details>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <h3 className="gen-sec-h">Recent generations</h3>
+      <div className="gen-history">
+        {gens === null && <div className="gen-empty">Loading…</div>}
+        {gens !== null && gens.length === 0 && (
+          <div className="gen-empty">Nothing yet — your first generation will appear here.</div>
+        )}
+        {gens?.map((g) => (
+          <div key={g.id} className="gen-row">
+            <div className={`gen-thumb ${g.aspect === '16:9' ? 'wide' : 'tall'}`}>
+              {g.status === 'ready' && g.result_url && g.kind === 'video' && (
+                <video src={g.result_url} controls playsInline preload="metadata" />
+              )}
+              {g.status === 'ready' && g.result_url && g.kind === 'image' && (
+                <img src={g.result_url} alt={g.prompt.slice(0, 60)} />
+              )}
+              {(g.status === 'processing' || g.status === 'queued') && (
+                <div className="gen-thumb-note">Rendering…</div>
+              )}
+              {g.status === 'failed' && <div className="gen-thumb-note failed">Failed · refunded</div>}
+            </div>
+            <div className="gen-row-body">
+              <strong>{g.prompt}</strong>
+              <span>
+                {g.model} · {g.kind} · {g.aspect} · {g.resolution} ·{' '}
+                {new Date(g.created_at).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </span>
+              {g.error && <span className="gen-row-error">{g.error}</span>}
+            </div>
+            <em className="gen-row-credits">
+              {g.status === 'failed' ? 'refunded' : g.credit_cost ? `-${g.credit_cost} cr` : '—'}
+            </em>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -553,7 +1028,7 @@ export default function AppShell() {
   const planName = profile ? PLANS[profile.plan].name.toUpperCase() : 'FREE';
 
   return (
-    <div className="shell v2">
+    <div className={`shell v2${page === 'gen' ? ' gen-mode' : ''}`}>
       <aside className="sidebar">
         <div className="logo side-logo">
           <span className="logo-mark zlogo">C</span> Cloudnivo
@@ -567,6 +1042,7 @@ export default function AppShell() {
             [
               ['clips', 'Clips', '✂'],
               ['studio', 'Studio', '🎞'],
+              ['gen', 'Gen Studio', '✨'],
               ['posts', 'Posts', '🗓'],
             ] as const
           ).map(([id, label, icon]) => (
@@ -617,6 +1093,10 @@ export default function AppShell() {
                   width: `${profile.minutes_limit ? Math.min(100, Math.round((profile.minutes_used / profile.minutes_limit) * 100)) : 0}%`,
                 }}
               />
+            </div>
+            <div className="plan-card-head">
+              <span>AI CREDITS</span>
+              <strong>{profile.credits_balance} left</strong>
             </div>
             <em className="plan-resets">Resets {resetLabel()}</em>
             <p>
@@ -682,6 +1162,10 @@ export default function AppShell() {
             variations={sfVars}
             onCreate={createShortformJob}
           />
+        )}
+
+        {page === 'gen' && profile && (
+          <GenPage profile={profile} showToast={showToast} refresh={refresh} />
         )}
 
         {page === 'posts' && (
@@ -1729,7 +2213,7 @@ function BillingPage({
         key: 'starter',
         name: 'Cloudnivo Starter',
         desc: 'Try posting: clip your videos and post the best ones.',
-        chips: [['5', 'TikTok posts / day'], ['200', 'minutes / mo'], ['3', 'Studio clips / mo'], ['1', 'workspace']],
+        chips: [['5', 'TikTok posts / day'], ['200', 'minutes / mo'], ['200', 'AI credits / mo'], ['1', 'workspace']],
         features: [
           'Post and schedule every clip to TikTok & YouTube',
           'Up to 5 TikTok posts a day per account',
@@ -1750,7 +2234,7 @@ function BillingPage({
         name: 'Cloudnivo Pro',
         desc: 'For weekly clippers posting volume across channels.',
         flag: 'BEST FOR CLIPPERS',
-        chips: [['10', 'TikTok posts / day'], ['600', 'minutes / mo'], ['3', 'Studio clips / mo'], ['3', 'workspaces']],
+        chips: [['10', 'TikTok posts / day'], ['600', 'minutes / mo'], ['500', 'AI credits / mo'], ['3', 'workspaces']],
         features: [
           'Post and schedule every clip to TikTok & YouTube',
           'Up to 10 TikTok posts a day per account',
@@ -1825,9 +2309,15 @@ function BillingPage({
     const plan = PLANS[key];
     await supabase
       .from('profiles')
-      .update({ plan: key, minutes_limit: plan.minutes, studio_clips_limit: plan.studio })
+      .update({
+        plan: key,
+        minutes_limit: plan.minutes,
+        studio_clips_limit: plan.studio,
+        credits_limit: plan.credits,
+        credits_balance: plan.credits,
+      })
       .eq('id', profile.id);
-    showToast(`${plan.name} applied — Stripe checkout coming soon`);
+    showToast(`${plan.name} applied — ${plan.credits} AI credits added`);
     refresh();
   }
 
@@ -1900,7 +2390,9 @@ function BillingPage({
         })}
       </div>
       <p className="form-note" style={{ textAlign: 'center' }}>
-        Clips uses 1 minute for every minute of video it processes.
+        Clips uses 1 minute for every minute of video it processes. AI Studio uses credits: images 3
+        cr · video 16–32 cr per 5 seconds depending on quality. Failed generations are refunded
+        automatically.
       </p>
       <p className="form-note" style={{ textAlign: 'center' }}>
         🔒 Secure payment via Stripe · Cancel anytime

@@ -132,25 +132,25 @@ function Hero() {
           label="TikTok"
           caption="SCREAMED 'I COULDN'T EVEN FACE'"
           highlight="MY TEAM"
-          tint="linear-gradient(160deg,#F6D8C9,#F0BEA4 60%,#E8A87F)"
+          tint="linear-gradient(160deg,#2E241B,#40301F 60%,#573D22)"
         />
         <ClipCard
           label="Reels"
           caption="I AM CAN'T WIN IT IF WE CAN'T EVEN RUN"
           highlight="SEC OFFENSE"
-          tint="linear-gradient(160deg,#DCE4FF,#C3D2FA 60%,#A9BDF5)"
+          tint="linear-gradient(160deg,#1E2530,#2B3644 60%,#3A4757)"
         />
         <ClipCard
           label="Shorts"
           caption="THEY TOLD ME I TALK TOO MUCH, SO I MAKE SURE TO MAKE EVERY WORD COUNT."
           highlight="EVERY WORD"
-          tint="linear-gradient(160deg,#D8F0DC,#B8E4C4 60%,#9AD6AC)"
+          tint="linear-gradient(160deg,#1C2620,#28382E 60%,#354C3D)"
         />
         <ClipCard
           label="Reels"
           caption="WE'RE NOT DONE YET — WATCH WHAT HAPPENS NEXT"
           highlight="BE NEXT"
-          tint="linear-gradient(160deg,#F6E7C9,#EFD49E 60%,#E8C177)"
+          tint="linear-gradient(160deg,#2A2517,#3E361E 60%,#57491F)"
         />
       </div>
     </section>
