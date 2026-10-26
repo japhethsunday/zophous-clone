@@ -1037,8 +1037,10 @@ function ClipsPage({
           </div>
         )}
         <p className="form-note">
-          Free plan: 1 watermark-free clip a month · 1 left · resets {resetLabel()}. Posting and
-          scheduling are on paid plans.{' '}
+          {profile.plan === 'free'
+            ? `Free plan: 1 watermark-free clip a month · 1 left · resets ${resetLabel()}. `
+            : `${PLANS[profile.plan].name}: ${minutesLeft} minutes left · resets ${resetLabel()}. `}
+          Posting and scheduling are on paid plans.{' '}
           <a className="lnk" onClick={(e) => { e.preventDefault(); onUpgrade(); }}>
             Upgrade
           </a>
