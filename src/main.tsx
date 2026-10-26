@@ -54,7 +54,7 @@ function Nav() {
     <header className="nav-wrap">
       <nav className="nav">
         <a className="logo" href="#top">
-          <span className="logo-mark">◉</span> CLOUDNIVO
+          <span className="logo-mark">C</span> CLOUDNIVO
         </a>
         <div className="nav-links">
           <a href="#top">Home</a>
@@ -132,25 +132,25 @@ function Hero() {
           label="TikTok"
           caption="SCREAMED 'I COULDN'T EVEN FACE'"
           highlight="MY TEAM"
-          tint="linear-gradient(160deg,#1d2430,#101620 60%,#0c1118)"
+          tint="linear-gradient(160deg,#F6D8C9,#F0BEA4 60%,#E8A87F)"
         />
         <ClipCard
           label="Reels"
           caption="I AM CAN'T WIN IT IF WE CAN'T EVEN RUN"
           highlight="SEC OFFENSE"
-          tint="linear-gradient(160deg,#3a2a12,#241a0c 60%,#160f06)"
+          tint="linear-gradient(160deg,#DCE4FF,#C3D2FA 60%,#A9BDF5)"
         />
         <ClipCard
           label="Shorts"
           caption="THEY TOLD ME I TALK TOO MUCH, SO I MAKE SURE TO MAKE EVERY WORD COUNT."
           highlight="EVERY WORD"
-          tint="linear-gradient(160deg,#2c1620,#1c0e14 60%,#12080c)"
+          tint="linear-gradient(160deg,#D8F0DC,#B8E4C4 60%,#9AD6AC)"
         />
         <ClipCard
           label="Reels"
           caption="WE'RE NOT DONE YET — WATCH WHAT HAPPENS NEXT"
           highlight="BE NEXT"
-          tint="linear-gradient(160deg,#1a2c1c,#101c10 60%,#0a120a)"
+          tint="linear-gradient(160deg,#F6E7C9,#EFD49E 60%,#E8C177)"
         />
       </div>
     </section>
@@ -886,7 +886,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <a className="logo" href="#top">
-          <span className="logo-mark">◉</span> CLOUDNIVO
+          <span className="logo-mark">C</span> CLOUDNIVO
         </a>
         <div className="footer-links">
           <a href="#/about">About</a>
