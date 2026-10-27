@@ -17,6 +17,7 @@ import {
   type Generation,
   type PromptPreset,
   type ScriptItem,
+  type BrandKit,
 } from './lib/supabase';
 
 /* ---------------- helpers ---------------- */
@@ -350,7 +351,11 @@ function GenPage({
   const [gens, setGens] = useState<Generation[] | null>(null);
   const [prompts, setPrompts] = useState<PromptPreset[]>([]);
   const [scripts, setScripts] = useState<ScriptItem[] | null>(null);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(() => {
+    const v = sessionStorage.getItem('cn_gen_prompt') ?? '';
+    if (v) sessionStorage.removeItem('cn_gen_prompt');
+    return v;
+  });
   const [modelId, setModelId] = useState<string>(GEN_MODELS[0].id);
   const [aspect, setAspect] = useState<string>('9:16');
   const [resolution, setResolution] = useState<string>('720p');
@@ -361,6 +366,8 @@ function GenPage({
   const [tone, setTone] = useState<string>(GEN_TONES[0]);
   const [scriptLen, setScriptLen] = useState(30);
   const [scriptBusy, setScriptBusy] = useState(false);
+  const [brand, setBrand] = useState<BrandKit | null>(null);
+  const [applyBrand, setApplyBrand] = useState(false);
 
   const model = GEN_MODELS.find((m) => m.id === modelId) ?? GEN_MODELS[0];
   const cost = creditCostFor(model.kind, resolution, model.kind === 'video' ? durationSeconds : null);
@@ -368,14 +375,16 @@ function GenPage({
   const creditsLimit = profile.credits_limit ?? 0;
 
   const load = useCallback(async () => {
-    const [g, pl, sc] = await Promise.all([
+    const [g, pl, sc, bk] = await Promise.all([
       supabase.from('generations').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('prompt_library').select('*').order('sort', { ascending: true }),
       supabase.from('scripts').select('*').order('created_at', { ascending: false }).limit(30),
+      supabase.from('brand_kits').select('*').limit(1),
     ]);
     setGens((g.data ?? []) as Generation[]);
     setPrompts((pl.data ?? []) as PromptPreset[]);
     setScripts((sc.data ?? []) as ScriptItem[]);
+    setBrand((bk.data?.[0] as BrandKit) ?? null);
   }, []);
 
   useEffect(() => {
@@ -437,16 +446,27 @@ function GenPage({
       return;
     }
     setBusy(true);
+    let finalPrompt = prompt.trim();
+    if (applyBrand && brand) {
+      const bits = [
+        brand.brand_name ? `brand "${brand.brand_name}"` : '',
+        brand.primary_color ? `brand color ${brand.primary_color}` : '',
+        brand.font_choice ? `${brand.font_choice} typography feel` : '',
+        brand.cta_text ? `end with the call to action "${brand.cta_text}"` : '',
+      ].filter(Boolean);
+      if (bits.length) finalPrompt = `${finalPrompt}. Style it on-brand: ${bits.join(', ')}.`;
+    }
     const { data, error } = await supabase.functions.invoke('generate-media', {
       body: {
         mode: 'create',
         kind: model.kind,
         model: model.id,
-        prompt: prompt.trim(),
+        prompt: finalPrompt,
         aspect,
         resolution,
         durationSeconds: model.kind === 'video' ? durationSeconds : undefined,
         formatKey,
+        style: applyBrand && brand ? 'brand' : undefined,
       },
     });
     setBusy(false);
@@ -466,8 +486,9 @@ function GenPage({
         : `${model.name} is rendering — it will appear below when done`,
     );
     setPrompt('');
+    setApplyBrand(false);
     await refresh();
-  }, [prompt, creditsLeft, cost, model, aspect, resolution, durationSeconds, formatKey, showToast, refresh]);
+  }, [prompt, applyBrand, brand, creditsLeft, cost, model, aspect, resolution, durationSeconds, formatKey, showToast, refresh]);
 
   const writeScript = useCallback(async () => {
     if (!topic.trim()) {
@@ -568,6 +589,23 @@ function GenPage({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
               />
+              {prompts.length > 0 && (
+                <div className="gen-chips">
+                  {prompts.slice(0, 8).map((p) => (
+                    <button key={p.id} className="gen-chip" onClick={() => usePreset(p)} title={p.prompt}>
+                      {p.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="gen-tip">Tip: subject + motion + lighting + mood beats a short prompt. Tap a format chip to start from a proven viral template.</p>
+              {brand && (
+                <label className="gen-brand-toggle">
+                  <input type="checkbox" checked={applyBrand} onChange={(e) => setApplyBrand(e.target.checked)} />
+                  Apply brand style
+                  {brand.brand_name ? ` — ${brand.brand_name}` : ''} (colors, typography, CTA woven into the prompt)
+                </label>
+              )}
               <div className="gen-opt-row">
                 <span className="gen-opt-label">Model</span>
                 {GEN_MODELS.map((m) => (
@@ -755,7 +793,25 @@ function GenPage({
               {g.status === 'failed' && <div className="gen-thumb-note failed">Failed · refunded</div>}
             </div>
             <div className="gen-row-body">
-              <strong>{g.prompt}</strong>
+              <strong>
+                {g.prompt}
+                {g.status === 'ready' && g.virality_score != null && (
+                  <span
+                    className={`gen-score${g.virality_score >= 75 ? ' hot' : ''}`}
+                    title="AI estimate of how well content like this performs on TikTok/Reels/Shorts"
+                  >
+                    {g.virality_score}
+                  </span>
+                )}
+              </strong>
+              {g.status === 'ready' && g.meta?.description && <span className="gen-meta-desc">{g.meta.description}</span>}
+              {g.status === 'ready' && g.meta?.hashtags && g.meta.hashtags.length > 0 && (
+                <span className="gen-tags">
+                  {g.meta.hashtags.map((t) => (
+                    <i key={t}>#{t}</i>
+                  ))}
+                </span>
+              )}
               <span>
                 {g.model} · {g.kind} · {g.aspect} · {g.resolution} ·{' '}
                 {new Date(g.created_at).toLocaleString('en-US', {
@@ -780,8 +836,13 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
+  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'posts', 'brand', 'dna', 'analytics', 'campaigns', 'billing', 'settings'];
+  const pageFromHash = (): Page => {
+    const m = location.hash.match(/^#\/app\/([a-z]+)$/);
+    return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
+  };
   const [session, setSession] = useState<boolean | null>(null);
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>(pageFromHash);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [clips, setClips] = useState<Clip[]>([]);
@@ -837,6 +898,14 @@ export default function AppShell() {
     });
     return () => sub.subscription.unsubscribe();
   }, [refresh]);
+
+  // Deep links: #/app/<page> opens that page, including when the app is already mounted.
+  useEffect(() => {
+    const h = () => setPage(pageFromHash());
+    window.addEventListener('hashchange', h);
+    return () => window.removeEventListener('hashchange', h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const markChecklist = useCallback(
     async (key: string) => {
@@ -1420,7 +1489,11 @@ function ClipsPage({
   onUpgrade: () => void;
 }) {
   const [tab, setTab] = useState<'link' | 'upload'>('link');
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(() => {
+    const v = sessionStorage.getItem('cn_link') ?? '';
+    if (v) sessionStorage.removeItem('cn_link');
+    return v;
+  });
   const [title, setTitle] = useState('');
   const [mins, setMins] = useState(45);
   const [openSet, setOpenSet] = useState<string | null>(null);

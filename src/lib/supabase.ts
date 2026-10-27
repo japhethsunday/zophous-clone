@@ -109,6 +109,8 @@ export type Generation = {
   thumb_url: string | null;
   credit_cost: number;
   error: string | null;
+  virality_score: number | null;
+  meta: { description?: string; hashtags?: string[] } | null;
   created_at: string;
   completed_at: string | null;
 };

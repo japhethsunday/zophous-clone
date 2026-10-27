@@ -77,6 +77,45 @@ async function startOpenAIImage(prompt: string, aspect: string) {
   return 'data:image/png;base64,' + b64;
 }
 
+// After a generation is ready, ask GPT for a real virality estimate + posting metadata.
+// Best-effort: any failure leaves the row untouched (no fake scores, no fake hashtags).
+async function enrichGeneration(admin: ReturnType<typeof createClient>, id: string, kind: string, prompt: string) {
+  if (!OPENAI_KEY) return;
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + OPENAI_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a short-form video strategist. Given an AI-generated ' + kind +
+              ' prompt, estimate how well content like it performs on TikTok/Reels/Shorts. ' +
+              'Reply with JSON only: {"score": <integer 1-100>, "description": "<one-sentence post description>", "hashtags": ["<tag>", ...]} ' +
+              'with 4-6 hashtags, no # symbols.',
+          },
+          { role: 'user', content: prompt.slice(0, 800) },
+        ],
+      }),
+    });
+    if (!r.ok) return;
+    const j = await r.json();
+    const parsed = JSON.parse(j.choices?.[0]?.message?.content ?? '{}');
+    const score = Math.max(1, Math.min(100, Number(parsed.score) || 0));
+    if (!score) return;
+    const meta: Record<string, unknown> = { description: String(parsed.description ?? '').slice(0, 300) };
+    if (Array.isArray(parsed.hashtags)) {
+      meta.hashtags = parsed.hashtags.slice(0, 8).map((t: unknown) => String(t).replace(/^#/, ''));
+    }
+    await admin.from('generations').update({ virality_score: score, meta }).eq('id', id);
+  } catch {
+    // enrichment is optional — never fail the generation over it
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
@@ -145,8 +184,15 @@ Deno.serve(async (req) => {
           return json({ generation: { ...gen, status: 'processing' }, creditsCharged: cost });
         } else {
           const dataUrl = await startOpenAIImage(prompt, aspect);
-          await admin.from('generations').update({ provider: 'openai', status: 'ready', result_url: dataUrl, completed_at: new Date().toISOString() }).eq('id', gen.id);
-          return json({ generation: { ...gen, status: 'ready' }, creditsCharged: cost });
+          const { data: updated } = await admin
+            .from('generations')
+            .update({ provider: 'openai', status: 'ready', result_url: dataUrl, completed_at: new Date().toISOString() })
+            .eq('id', gen.id)
+            .select()
+            .single();
+          await enrichGeneration(admin, gen.id, 'image', prompt);
+          const { data: enriched } = await admin.from('generations').select('*').eq('id', gen.id).single();
+          return json({ generation: enriched ?? updated ?? gen, creditsCharged: cost });
         }
       } catch (providerErr) {
         const msg = providerErr instanceof Error ? providerErr.message : String(providerErr);
@@ -173,7 +219,9 @@ Deno.serve(async (req) => {
           .eq('id', gen.id)
           .select()
           .single();
-        return json({ generation: updated });
+        await enrichGeneration(admin, gen.id, 'video', gen.prompt);
+        const { data: enriched } = await admin.from('generations').select('*').eq('id', gen.id).single();
+        return json({ generation: enriched ?? updated });
       }
       if (job.status === 'failed' || job.status === 'canceled') {
         await admin.from('generations').update({ status: 'failed', error: String(job.error ?? 'provider_failed'), completed_at: new Date().toISOString() }).eq('id', gen.id);

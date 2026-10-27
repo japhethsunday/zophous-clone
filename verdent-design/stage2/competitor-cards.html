@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloudNivo — Competitor Study · Build Proposal</title>
+<style>
+  :root{
+    --bg:#0E0F12; --panel:#15171C; --panel2:#1A1D24; --line:#262A33;
+    --ink:#EDEDEA; --muted:#9AA0AB; --copper:#D97A48; --copper2:#E8935F;
+    --good:#5FBF8A; --warn:#E2B755;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif;padding:48px 28px 96px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .kicker{display:inline-flex;align-items:center;gap:10px;color:var(--copper2);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:11px;margin-bottom:14px}
+  .kicker::before{content:"";width:26px;height:2px;background:var(--copper)}
+  h1{font-size:34px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
+  .lede{color:var(--muted);max-width:760px;margin-bottom:36px}
+  .lede b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;margin-bottom:48px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--copper),transparent 65%)}
+  .site{display:flex;align-items:center;gap:12px;margin-bottom:2px}
+  .mark{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:17px;flex:none}
+  .site .nm{font-weight:700;font-size:16px}
+  .site .tag{color:var(--muted);font-size:12.5px}
+  .pitch{font-size:15px;color:var(--ink);font-weight:600}
+  .sect{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+  li{color:var(--muted);font-size:13.5px;padding-left:16px;position:relative}
+  li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--line)}
+  li.steal::before{background:var(--copper)}
+  li.steal{color:#D8DCE3}
+  .nums{display:flex;gap:14px;flex-wrap:wrap;margin-top:2px}
+  .num{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--muted)}
+  .num b{color:var(--ink)}
+  .adopt{margin-top:44px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px}
+  .adopt h2{font-size:22px;font-weight:800;margin-bottom:6px}
+  .adopt p.sub{color:var(--muted);margin-bottom:22px}
+  .picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .pick{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .pick h3{font-size:14.5px;font-weight:700;margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+  .prio{font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:20px;flex:none}
+  .p1{background:rgba(217,122,72,.16);color:var(--copper2)}
+  .p2{background:rgba(95,191,138,.14);color:var(--good)}
+  .p3{background:rgba(226,183,85,.13);color:var(--warn)}
+  .pick p{color:var(--muted);font-size:13px}
+  .foot{margin-top:40px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .btn{background:linear-gradient(135deg,var(--copper),#C4642F);color:#14100C;font-weight:700;padding:12px 22px;border-radius:10px;text-decoration:none;font-size:14px;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+  .ghost{border:1px solid var(--line);color:var(--muted);padding:12px 22px;border-radius:10px;text-decoration:none;font-size:14px}
+  .note{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">REA competitor study · 6 sites · before we build</div>
+  <h1>What the best in the category do — and what CloudNivo takes from each</h1>
+  <p class="lede">Captured with REA (passive CDP inspection + owned-browser scenarios): <b>OpusClip, Vizard, Submagic, Klap, EveryGen</b> (your logged-in account) and <b>Zophous</b>. Each card shows their pitch, their signature moves, and the copper-marked items worth adopting. Nothing is built yet — you approve first.</p>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="site">
+        <div class="mark" style="background:#24235E;color:#fff">O</div>
+        <div><div class="nm">OpusClip</div><div class="tag">opus.pro</div></div>
+      </div>
+      <div class="pitch">"1 long video → 10 viral clips. Create 10x faster."</div>
+      <div class="nums"><span class="num"><b>20M+</b> creators</span><span class="num"><b>60 min</b> free / month</span></div>
+      <div class="sect">Signature moves</div>
+      <ul>
+        <li>Paste-a-link input is the hero action — no signup needed to try</li>
+        <li>Huge feature bench: ClipAnything, ReframeAnything, AI B-Roll, dubbing, thumbnail gen, speech enhance</li>
+        <li>Social scheduler — a month of posts in 10 minutes</li>
+        <li>Brand templates + team workspace for businesses</li>
+        <li>Export to Premiere / DaVinci (XML), public API + MCP</li>
+      </ul>
+      <div class="sect">CloudNivo should steal</div>
+      <ul>
+        <li class="steal">Link-paste box as the very first thing on the landing hero</li>
+        <li class="steal">Stat-strip proof ("20M+ creators" style → our real numbers)</li>
+        <li class="steal">Brand templates concept → feed our existing Brand Kit into generated clips</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="site">
+        <div class="mark" style="background:#0F5C4E;color:#fff">V</div>
+        <div><div class="nm">Vizard</div><div class="tag">vizard.ai</div></div>
+      </div>
+      <div class="pitch">"Turn your long video into viral clips with AI magic."</div>
+      <div class="nums"><span class="num"><b>10M+</b> creators</span><span class="num"><b>22</b> templates</span></div>
+      <div class="sect">Signature moves</div>
+      <ul>
+        <li>Example-prompt chips under the hero input (Product ad, UGC ad, Podcast clips, Listicle…)</li>
+        <li>Vizard Agent — a personal video editor you talk to</li>
+        <li>Text-based editing: trim video by deleting transcript text</li>
+        <li>Caption translation to 100+ languages</li>
+      </ul>
+      <div class="sect">CloudNivo should steal</div>
+      <ul>
+        <li class="steal">Prompt-chip row on the Gen page input (we have 13 formats — surface them as one-click chips)</li>
+        <li class="steal">"No signup needed to try" framing on the landing CTA</li>
+        <li class="steal">Segment strip: for creators / marketers / agencies on landing</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="site">
+        <div class="mark" style="background:#5A2BD9;color:#fff">S</div>
+        <div><div class="nm">Submagic</div><div class="tag">submagic.co</div></div>
+      </div>
+      <div class="pitch">"Edit shorts 10x faster with AI. From raw footage to viral shorts in 1 click."</div>
+      <div class="nums"><span class="num"><b>4M+</b> businesses</span><span class="num"><b>123</b> languages</span></div>
+      <div class="sect">Signature moves</div>
+      <ul>
+        <li>Captions as the wedge: 99% accuracy, viral caption styles</li>
+        <li>Magic Clips — auto repurpose one video into many shorts</li>
+        <li>AI Actors Studio — shorts without filming</li>
+        <li>Publishing automation baked into the editor</li>
+        <li>Free SEO tools (title/hashtag/hook generators) as traffic funnels</li>
+      </ul>
+      <div class="sect">CloudNivo should steal</div>
+      <ul>
+        <li class="steal">Stats trio close ("10x faster · +40% views · 80% cheaper") near the final CTA</li>
+        <li class="steal">Use-case rail (Business / Media / Agencies / Creators) with real outcomes</li>
+        <li class="steal">Auto-description + hashtags attached to every generated clip</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="site">
+        <div class="mark" style="background:#1E6BE6;color:#fff">K</div>
+        <div><div class="nm">Klap</div><div class="tag">klap.app</div></div>
+      </div>
+      <div class="pitch">"Turn 2h49 into viral shorts — TikToks, Reels, Shorts in one click."</div>
+      <div class="nums"><span class="num"><b>8.5M</b> clips made</span><span class="num"><b>$29</b>/mo flat</span></div>
+      <div class="sect">Signature moves</div>
+      <ul>
+        <li>Virality score on every generated clip</li>
+        <li>AI Reframe 2 — scene-aware layouts (split screen, screencast, gaming)</li>
+        <li>Simple one-plan pricing — no decision fatigue</li>
+        <li>API, MCP, Zapier / Make / n8n integrations</li>
+      </ul>
+      <div class="sect">CloudNivo should steal</div>
+      <ul>
+        <li class="steal">Show a virality/potential score on clips (our grading page already has the data)</li>
+        <li class="steal">"1 min of video ≈ 5 clips" expectation-setting line</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="site">
+        <div class="mark" style="background:#2B2B2B;color:#fff">E</div>
+        <div><div class="nm">EveryGen</div><div class="tag">everygen.ai — your logged-in account</div></div>
+      </div>
+      <div class="pitch">"What should Wizard make?" — an agent + creative tools suite.</div>
+      <div class="nums"><span class="num"><b>Wizard</b> creator agent</span><span class="num"><b>Credits</b> economy</span></div>
+      <div class="sect">Signature moves</div>
+      <ul>
+        <li>Conversational hero: "What should Wizard make?" instead of a form</li>
+        <li>Creative tools grid: Shorts Studio, Video Generator, Image Generator, Marketing Studio, Viral Presets</li>
+        <li>Prompt Library with "one-click use" viral prompts (already integrated)</li>
+        <li>Runs inside Claude & ChatGPT via MCP</li>
+      </ul>
+      <div class="sect">CloudNivo should steal</div>
+      <ul>
+        <li class="steal">Prompt Library surfaced on the landing page, not just inside the app</li>
+        <li class="steal">Conversational "describe what you want" second input beside the link paste</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="site">
+        <div class="mark" style="background:#7A3B22;color:#fff">Z</div>
+        <div><div class="nm">Zophous</div><div class="tag">app.zophous.ai — original reference</div></div>
+      </div>
+      <div class="pitch">Managed short-form pipeline with graded output.</div>
+      <div class="nums"><span class="num"><b>Managers</b></span><span class="num"><b>Brand kits</b></span></div>
+      <div class="sect">Signature moves</div>
+      <ul>
+        <li>Grading breakdown — quality score per clip</li>
+        <li>Studio looks + brand kit as first-class objects</li>
+        <li>Campaign grouping of short-form output</li>
+        <li>Billing "families" with plan-aware limits</li>
+      </ul>
+      <div class="sect">Already in CloudNivo</div>
+      <ul>
+        <li class="steal">Grading, brand kit, DNA, campaigns, billing — all rebuilt natively</li>
+        <li class="steal">Nothing further to copy here; this is our baseline</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="adopt">
+    <h2>Proposed build — the synthesis</h2>
+    <p class="sub">Grouped by priority. Everything slots into the existing CloudNivo app; nothing gets rebuilt.</p>
+    <div class="picks">
+      <div class="pick">
+        <h3>1 · Landing hero upgrade <span class="prio p1">P1</span></h3>
+        <p>Replace the static hero with the category-standard pattern: link-paste input as the primary action, a second conversational input ("describe what you want AI to make"), and example-prompt chips under both. Stat-strip with our real numbers.</p>
+      </div>
+      <div class="pick">
+        <h3>2 · Gen page prompt chips <span class="prio p1">P1</span></h3>
+        <p>Vizard-style one-click chips: each viral format becomes a chip that fills the prompt + aspect ratio instantly. Adds "1 min ≈ 5 clips" style helper copy.</p>
+      </div>
+      <div class="pick">
+        <h3>3 · Clip metadata: virality + hashtags <span class="prio p1">P1</span></h3>
+        <p>Klap-style potential score on finished generations, plus auto-generated description + hashtags (OpenAI, already wired) attached to every result.</p>
+      </div>
+      <div class="pick">
+        <h3>4 · Stats-trio + use-case rail <span class="prio p2">P2</span></h3>
+        <p>Submagic's closing pattern: "10x faster · +40% views · 80% cheaper" before the final CTA, and a segmented "who we help" rail (creators / marketers / agencies).</p>
+      </div>
+      <div class="pick">
+        <h3>5 · Prompt Library on landing <span class="prio p2">P2</span></h3>
+        <p>Public teaser of the seeded viral prompt library with one-click "try in studio" — pulls the EveryGen playbook onto the marketing surface.</p>
+      </div>
+      <div class="pick">
+        <h3>6 · Brand template on clips <span class="prio p3">P3</span></h3>
+        <p>Feed the existing Brand Kit (fonts, colors, logo) into generated clip captions. Social scheduling stays out of scope for now — noted, not built.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <a class="btn" href="#approve" onclick="document.title='APPROVED — proceed';return false">Approve — build it</a>
+      <a class="ghost" href="#" onclick="document.title='SKIP — no changes';return false">Skip / tell me what to change</a>
+      <span class="note">Still pending from before: Replicate + OpenAI keys for real-generation testing.</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

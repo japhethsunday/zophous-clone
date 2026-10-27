@@ -102,7 +102,27 @@ function ClipCard({
 
 /* ---------- hero ---------- */
 
+const HERO_CHIPS = [
+  'Bodycam POV sprinting from a mystery',
+  'Ranking my top 5 conspiracy theories',
+  'Ring cam catches the unthinkable',
+  'UGC ad: skincare routine that went viral',
+  'Untold history storytime, dramatic tone',
+];
+
 function Hero() {
+  const [link, setLink] = useState('');
+  const [idea, setIdea] = useState('');
+
+  const goClip = () => {
+    if (link.trim()) sessionStorage.setItem('cn_link', link.trim());
+    location.hash = '#/app';
+  };
+  const goGen = () => {
+    if (idea.trim()) sessionStorage.setItem('cn_gen_prompt', idea.trim());
+    location.hash = '#/app/gen';
+  };
+
   return (
     <section className="hero" id="top">
       <Eyebrow>AI-Powered Video Clipping</Eyebrow>
@@ -112,16 +132,48 @@ function Hero() {
         turned into <span className="serif">daily shorts</span>.
       </h1>
       <p className="sub">
-        Paste a link and get captioned, scored clips, then post or schedule
-        <br className="desktop-br" /> them to TikTok and YouTube from one place.
+        Paste a link and get captioned, scored clips — or describe what you want and our AI
+        <br className="desktop-br" /> generates it. Both live in one studio.
       </p>
-      <div className="hero-ctas">
-        <a className="btn btn-purple" href="#/app">
-          Start for free
-        </a>
-        <a className="btn btn-ghost" href="#/app">
-          Watch the demo →
-        </a>
+      <div className="hero-inputs">
+        <div className="hero-input-row">
+          <input
+            className="hero-input"
+            placeholder="Paste a YouTube, podcast or stream link…"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && goClip()}
+          />
+          <button className="btn btn-purple" onClick={goClip}>
+            Get free clips
+          </button>
+        </div>
+        <div className="hero-input-row alt">
+          <input
+            className="hero-input"
+            placeholder="Or describe what AI should make — a bodycam POV, a UGC ad…"
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && goGen()}
+          />
+          <button className="btn btn-ghost" onClick={goGen}>
+            Generate it →
+          </button>
+        </div>
+        <div className="hero-chips">
+          {HERO_CHIPS.map((c) => (
+            <button
+              key={c}
+              className="hero-chip"
+              onClick={() => {
+                setIdea(c);
+                setLink('');
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
       </div>
       <p className="hero-stats">
         <strong>202,000+</strong> clips made by <strong>25,000+</strong> creators
@@ -688,11 +740,63 @@ function Pricing() {
   );
 }
 
+/* ---------- prompt library teaser ---------- */
+
+const LIBRARY_TEASER = [
+  { cat: 'Shorts', t: 'Bodycam POV', d: 'First-person sprint-cam format that hooks in one second.' },
+  { cat: 'Shorts', t: 'Ring cam story', d: 'Doorbell-footage storytelling — curiosity loop built in.' },
+  { cat: 'Marketing', t: 'UGC product ad', d: 'Handheld creator-style ad script for any product.' },
+  { cat: 'Story', t: 'Animal story', d: 'Nature-documentary narration over generated footage.' },
+  { cat: 'Shorts', t: 'Ranking video', d: 'Countdown list format engineered for rewatching.' },
+  { cat: 'Image', t: 'Product shot', d: 'Studio-lit hero images ready for posts and ads.' },
+];
+
+function PromptLibraryTeaser() {
+  return (
+    <section className="section" id="prompts">
+      <Eyebrow>Viral Prompt Library</Eyebrow>
+      <h2>
+        Don't start from a <span className="serif">blank prompt</span>
+      </h2>
+      <p className="sub">
+        Every generation can start from a proven viral format. Pick one, tweak it, generate — the
+        full library lives inside the studio.
+      </p>
+      <div className="pl-grid">
+        {LIBRARY_TEASER.map((p) => (
+          <div className="pl-card" key={p.t}>
+            <em>{p.cat}</em>
+            <h3>{p.t}</h3>
+            <p>{p.d}</p>
+            <a className="pl-use" href="#/app/gen">
+              Use in studio →
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* ---------- cta + footer ---------- */
 
 function Cta() {
   return (
     <section className="section cta">
+      <div className="cta-trio">
+        <div>
+          <strong>202K+</strong>
+          <span>clips made</span>
+        </div>
+        <div>
+          <strong>8M+</strong>
+          <span>views generated</span>
+        </div>
+        <div>
+          <strong>48K</strong>
+          <span>hours saved</span>
+        </div>
+      </div>
       <h2>
         Start making <span className="serif">viral clips</span> today
       </h2>
@@ -947,6 +1051,7 @@ function Landing() {
         <Stats />
         <PublishTrack />
         <Features />
+        <PromptLibraryTeaser />
         <WhyCloudnivo />
         <WhoFor />
         <Faq />
