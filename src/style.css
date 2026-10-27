@@ -292,7 +292,7 @@ h1, h2, h3, h4 {
 .sp-row { display: grid; grid-template-columns: 1fr 90px 34px; align-items: center; gap: 12px; padding: 7px 0; font-size: 13px; font-weight: 600; }
 .sp-track { height: 12px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--panel-warm); overflow: hidden; }
 .sp-fill { height: 100%; background: linear-gradient(90deg, var(--accent-hover), var(--accent-deep)); border-radius: var(--radius-pill); }
-.sp-fill.alt { background: rgba(103, 96, 79, 0.35); }
+.sp-fill.alt { background: color-mix(in srgb, var(--muted) 35%, transparent); }
 .sp-row em { font-style: normal; font-weight: 800; font-size: 13px; text-align: right; color: var(--accent-deep); font-variant-numeric: tabular-nums; }
 
 /* coach */
@@ -504,14 +504,14 @@ h1, h2, h3, h4 {
 .app-clip { display: grid; gap: 10px; }
 .app-clip-screen { border: 1px solid var(--line); border-radius: var(--radius-field); position: relative; overflow: hidden; background: var(--surface-media); box-shadow: var(--shadow-sm); cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; padding: 14px; color: #f4f4f4; }
 .app-clip .clip-top { display: flex; justify-content: space-between; align-items: center; position: absolute; top: 12px; left: 12px; right: 12px; }
-.clip-src { font-size: 9px; font-weight: 800; letter-spacing: .2em; background: color-mix(in srgb, var(--ink) 55%, transparent); border: 1px solid color-mix(in srgb, var(--brand-fg) 14%, transparent); border-radius: var(--radius-xs); padding: 3px 7px; color: rgba(243, 241, 233, 0.85); }
+.clip-src { font-size: 9px; font-weight: 800; letter-spacing: .2em; background: color-mix(in srgb, var(--ink) 55%, transparent); border: 1px solid color-mix(in srgb, var(--brand-fg) 14%, transparent); border-radius: var(--radius-xs); padding: 3px 7px; color: color-mix(in srgb, var(--bg) 88%, transparent); }
 .score-badge { font-weight: 800; font-size: 13px; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 4px 11px; background: var(--panel); color: var(--muted); display: inline-block; font-variant-numeric: tabular-nums; }
 .score-badge.hi { background: var(--accent); color: var(--brand-fg); border-color: transparent; }
 .score-badge.mid { background: color-mix(in srgb, var(--mid) 12%, transparent); color: var(--mid); }
 .score-badge.low { background: color-mix(in srgb, var(--low) 10%, transparent); color: var(--low); }
 .clip-caption { font-size: 13px; font-weight: 700; line-height: 1.35; }
 .clip-views { font-size: 11px; font-weight: 700; color: var(--accent-deep); margin-top: 5px; }
-.wm { position: absolute; top: 44px; right: 12px; font-size: 8px; font-weight: 800; letter-spacing: .16em; opacity: .6; background: color-mix(in srgb, var(--ink) 50%, transparent); color: rgba(243, 241, 233, 0.85); border-radius: var(--radius-xs); padding: 2px 5px; }
+.wm { position: absolute; top: 44px; right: 12px; font-size: 8px; font-weight: 800; letter-spacing: .16em; opacity: .6; background: color-mix(in srgb, var(--ink) 50%, transparent); color: color-mix(in srgb, var(--bg) 88%, transparent); border-radius: var(--radius-xs); padding: 2px 5px; }
 .app-clip-meta { display: grid; gap: 8px; justify-items: start; }
 .app-clip-times { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 .posted-tag { font-size: 12px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: var(--radius-sm); padding: 5px 10px; }
