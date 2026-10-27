@@ -68,6 +68,7 @@ export type Clip = {
   end_seconds: number;
   caption_style: string;
   watermarked: boolean;
+  thumb_url?: string | null;
   platform: string | null;
   posted_at: string | null;
   created_at: string;
