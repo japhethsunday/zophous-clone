@@ -22,6 +22,89 @@ import {
 
 /* ---------------- helpers ---------------- */
 
+/* Inline SVG icon set — 16px, 1.5px stroke, currentColor (no dependency) */
+const IC_PATHS: Record<string, React.ReactNode> = {
+  scissors: (
+    <>
+      <circle cx="6" cy="6" r="2.6" />
+      <circle cx="6" cy="18" r="2.6" />
+      <path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12" />
+    </>
+  ),
+  film: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4" />
+    </>
+  ),
+  sparkles: (
+    <>
+      <path d="M10 3l1.8 4.7L16.5 9.5l-4.7 1.8L10 16l-1.8-4.7L3.5 9.5l4.7-1.8L10 3z" />
+      <path d="M18 14l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z" />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 11h18" />
+    </>
+  ),
+  diamond: <path d="M12 3l8 8-8 10L4 11l8-8z" />,
+  activity: <path d="M22 12h-4l-3 9L9 3l-3 9H2" />,
+  chart: (
+    <>
+      <path d="M5 20v-6M11 20V8M17 20v-10" />
+      <path d="M3 20h18" />
+    </>
+  ),
+  megaphone: (
+    <>
+      <path d="m3 11 18-5v12L3 14v-3z" />
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </>
+  ),
+  card: (
+    <>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20" />
+    </>
+  ),
+  sliders: (
+    <>
+      <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
+      <path d="M1 14h6M9 8h6M17 16h6" />
+    </>
+  ),
+  lock: (
+    <>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </>
+  ),
+  zap: <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />,
+  check: <path d="M20 6 9 17l-5-5" />,
+  play: <path d="M6 4l14 8-14 8V4z" />,
+};
+
+function Ic({ name, size = 16 }: { name: keyof typeof IC_PATHS | string; size?: number }) {
+  return (
+    <svg
+      className="ic"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {IC_PATHS[name] ?? null}
+    </svg>
+  );
+}
+
 function gradeOf(score: number): string {
   if (score >= 93) return 'A+';
   if (score >= 85) return 'A';
@@ -196,17 +279,21 @@ function ClipCardView({
   return (
     <div className="app-clip">
       <div className="app-clip-screen" style={{ aspectRatio: '9/16' }} onClick={() => onOpen?.(clip)}>
+        {clip.thumb_url ? (
+          <img className="app-clip-thumb" src={clip.thumb_url} alt="" loading="lazy" />
+        ) : (
+          <div className="app-clip-ph"><Ic name="play" size={22} /></div>
+        )}
         <div className="clip-top">
           <span className="clip-src">{clip.caption_style.toUpperCase()}</span>
           <ScoreBadge score={clip.score} />
         </div>
-        <div className="clip-caption">{clip.title}</div>
-        <div className="clip-views">~{predictedViews(clip).toLocaleString()} views</div>
         {clip.watermarked && <div className="wm">◉ CLOUDNIVO</div>}
       </div>
       <div className="app-clip-meta">
+        <strong className="app-clip-title">{clip.title}</strong>
         <div className="app-clip-times">
-          {fmtTime(clip.start_seconds)} – {fmtTime(clip.end_seconds)}
+          {fmtTime(clip.start_seconds)} – {fmtTime(clip.end_seconds)} · ~{predictedViews(clip).toLocaleString()} views
         </div>
         <button className="lnk" onClick={() => setOpen((o) => !o)}>
           {open ? 'Hide Breakdown ▲' : 'Show Breakdown ▼'}
@@ -311,10 +398,10 @@ function PostModal({
 /* ---------------- gen studio (real AI generation via Edge Functions) ---------------- */
 
 const GEN_MODELS = [
-  { id: 'seedance-fast', name: 'Seedance Lite', kind: 'video', tag: 'Fast vertical clips', accent: '#38BDF8' },
-  { id: 'seedance-pro', name: 'Seedance Pro', kind: 'video', tag: 'Richer motion detail', accent: '#7C5CFF' },
-  { id: 'kling-2.1', name: 'Kling 2.1', kind: 'video', tag: 'Cinematic realism', accent: '#F472B6' },
-  { id: 'gpt-image', name: 'GPT Image', kind: 'image', tag: 'Poster-grade stills', accent: '#FBBF24' },
+  { id: 'seedance-fast', name: 'Seedance Lite', kind: 'video', tag: 'Fast vertical clips', accent: 'var(--c1)' },
+  { id: 'seedance-pro', name: 'Seedance Pro', kind: 'video', tag: 'Richer motion detail', accent: 'var(--c4)' },
+  { id: 'kling-2.1', name: 'Kling 2.1', kind: 'video', tag: 'Cinematic realism', accent: 'var(--c5)' },
+  { id: 'gpt-image', name: 'GPT Image', kind: 'image', tag: 'Poster-grade stills', accent: 'var(--c2)' },
 ] as const;
 
 const GEN_ASPECTS = ['9:16', '16:9', '1:1'] as const;
@@ -1094,8 +1181,6 @@ export default function AppShell() {
   }
   if (!session) return <SigninGate />;
 
-  const planName = profile ? PLANS[profile.plan].name.toUpperCase() : 'FREE';
-
   return (
     <div className={`shell v2${page === 'gen' ? ' gen-mode' : ''}`}>
       <aside className="sidebar">
@@ -1106,41 +1191,41 @@ export default function AppShell() {
           ‹ All Workspaces
         </button>
         <nav>
-          <div className="nav-group">CREATE</div>
+          <div className="nav-group">Create</div>
           {(
             [
-              ['clips', 'Clips', '✂'],
-              ['studio', 'Studio', '🎞'],
-              ['gen', 'Gen Studio', '✨'],
-              ['posts', 'Posts', '🗓'],
+              ['clips', 'Clips', 'scissors'],
+              ['studio', 'Studio', 'film'],
+              ['gen', 'Gen Studio', 'sparkles'],
+              ['posts', 'Posts', 'calendar'],
             ] as const
           ).map(([id, label, icon]) => (
             <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
-              <span className="side-ic">{icon}</span> {label}
+              <span className="side-ic"><Ic name={icon} /></span> {label}
             </button>
           ))}
-          <div className="nav-group">GROW</div>
+          <div className="nav-group">Grow</div>
           {(
             [
-              ['brand', 'Brand', '◈'],
-              ['dna', 'DNA Profile', '✦'],
-              ['analytics', 'Analytics', '📊'],
-              ['campaigns', 'Campaigns', '📣'],
+              ['brand', 'Brand', 'diamond'],
+              ['dna', 'DNA Profile', 'activity'],
+              ['analytics', 'Analytics', 'chart'],
+              ['campaigns', 'Campaigns', 'megaphone'],
             ] as const
           ).map(([id, label, icon]) => (
             <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
-              <span className="side-ic">{icon}</span> {label}
+              <span className="side-ic"><Ic name={icon} /></span> {label}
             </button>
           ))}
-          <div className="nav-group">ACCOUNT</div>
+          <div className="nav-group">Account</div>
           {(
             [
-              ['billing', 'Billing', '💳'],
-              ['settings', 'Settings', '⚙'],
+              ['billing', 'Billing', 'card'],
+              ['settings', 'Settings', 'sliders'],
             ] as const
           ).map(([id, label, icon]) => (
             <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
-              <span className="side-ic">{icon}</span> {label}
+              <span className="side-ic"><Ic name={icon} /></span> {label}
             </button>
           ))}
         </nav>
@@ -1151,29 +1236,43 @@ export default function AppShell() {
 
         {profile && (
           <div className="plan-card">
-            <div className="plan-card-head">
-              <span>{planName} PLAN</span>
-              <strong>{minutesLeft} min left</strong>
+            <div className="plan-name">{PLANS[profile.plan].name}</div>
+            <div className="plan-meter">
+              <div className="plan-meter-label">
+                <span>Clipping minutes</span>
+                <strong>{minutesLeft} of {profile.minutes_limit} min</strong>
+              </div>
+              <div className="sp-track">
+                <div
+                  className="sp-fill"
+                  style={{
+                    width: `${profile.minutes_limit ? Math.min(100, Math.round((minutesLeft / profile.minutes_limit) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
             </div>
-            <div className="sp-track">
-              <div
-                className="sp-fill"
-                style={{
-                  width: `${profile.minutes_limit ? Math.min(100, Math.round((profile.minutes_used / profile.minutes_limit) * 100)) : 0}%`,
-                }}
-              />
-            </div>
-            <div className="plan-card-head">
-              <span>AI CREDITS</span>
-              <strong>{profile.credits_balance} left</strong>
+            <div className="plan-meter">
+              <div className="plan-meter-label">
+                <span>AI credits</span>
+                <strong>{profile.credits_balance} of {PLANS[profile.plan].credits}</strong>
+              </div>
+              <div className="sp-track">
+                <div
+                  className="sp-fill alt"
+                  style={{
+                    width: `${PLANS[profile.plan].credits ? Math.min(100, Math.round((profile.credits_balance / PLANS[profile.plan].credits) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
             </div>
             <em className="plan-resets">Resets {resetLabel()}</em>
             <p>
-              {minutesLeft} free minutes left this month (20 minimum per video). Upgrade for more, no
-              watermark &amp; analytics.
+              {profile.plan === 'free'
+                ? '1 watermark-free clip a month.'
+                : 'Watermark-free clips with analytics.'}
             </p>
             <button className="btn btn-purple sm wide" onClick={() => setPage('billing')}>
-              ⚡ Upgrade Plan
+              <Ic name="zap" size={14} /> Upgrade Plan
             </button>
           </div>
         )}
@@ -1376,32 +1475,51 @@ function HomePage({
   onNav: (p: Page) => void;
   onPost: (c: Clip) => void;
 }) {
-  const items: Array<[string, string, string, string, Page]> = [
-    ['first_video', 'Make your first clips', 'Turn a long video into short clips in a few minutes.', 'Create clips', 'clips'],
-    ['connected', 'Connect TikTok or YouTube', 'So you can post straight from Cloudnivo and unlock your DNA.', 'Connect', 'settings'],
-    ['first_post', 'Post or schedule a clip', 'Post now or schedule a week ahead — TikTok and YouTube.', checklist.first_post ? 'Go to your clips' : '🔒 Go to your clips', 'clips'],
-    ['dna', 'Unlock your DNA Profile', 'See which hooks and topics go viral for you, then create clips with that recipe.', 'Connect TikTok first', 'dna'],
+  const items: Array<[string, string, string, string, Page, boolean]> = [
+    ['first_video', 'Make your first clips', 'Turn a long video into short clips in a few minutes.', 'Create clips', 'clips', false],
+    ['connected', 'Connect TikTok or YouTube', 'So you can post straight from Cloudnivo and unlock your DNA.', 'Connect', 'settings', false],
+    ['first_post', 'Post or schedule a clip', 'Post now or schedule a week ahead — TikTok and YouTube.', 'Go to your clips', 'clips', !checklist.connected],
+    ['dna', 'Unlock your DNA Profile', 'See which hooks and topics go viral for you, then create clips with that recipe.', 'Open DNA Profile', 'dna', !checklist.connected],
   ];
   return (
     <div className="page-pad">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-sub">Welcome back, {profile.display_name ?? 'creator'} — here's your studio today.</p>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-outline sm" onClick={() => onNav('gen')}>
+            <Ic name="sparkles" size={14} /> Generate
+          </button>
+          <button className="btn btn-purple sm" onClick={() => onNav('clips')}>
+            <Ic name="scissors" size={14} /> Create clips
+          </button>
+        </div>
+      </div>
       <div className="home-top">
         <div className="checklist card">
           <div className="card-head">
             <h3>Getting started</h3>
             <em>{doneCount} of 4 done</em>
           </div>
-          {items.map(([k, t, d, cta, target], i) => (
+          {items.map(([k, t, d, cta, target, locked], i) => (
             <div className={`check-item${checklist[k] ? ' done' : ''}`} key={k}>
-              <span className="check-num">{i + 1}</span>
+              <span className="check-num">{checklist[k] ? <Ic name="check" size={13} /> : i + 1}</span>
               <div>
                 <strong>{t}</strong>
                 <p>{d}</p>
               </div>
-              {!checklist[k] && (
-                <button className="btn btn-outline sm" onClick={() => onNav(target)}>
-                  {cta}
-                </button>
-              )}
+              {!checklist[k] &&
+                (locked ? (
+                  <button className="btn btn-outline sm locked" disabled title="Connect TikTok or YouTube first">
+                    <Ic name="lock" size={13} /> {cta}
+                  </button>
+                ) : (
+                  <button className="btn btn-outline sm" onClick={() => onNav(target)}>
+                    {cta}
+                  </button>
+                ))}
             </div>
           ))}
         </div>
@@ -1427,15 +1545,16 @@ function HomePage({
       <div className="qa-grid">
         {(
           [
-            ['Clips', 'Fast clips from a link or upload', 'clips'],
-            ['Studio', 'Edit your talking-head videos', 'studio'],
-            ['Posts', 'Your posting calendar', 'posts'],
-            ['DNA Profile', 'What goes viral for you', 'dna'],
-            ['Analytics', 'TikTok and YouTube performance', 'analytics'],
-            ['Settings', 'Account, connections, workspace', 'settings'],
+            ['Clips', 'Fast clips from a link or upload', 'clips', 'scissors'],
+            ['Studio', 'Edit your talking-head videos', 'studio', 'film'],
+            ['Posts', 'Your posting calendar', 'posts', 'calendar'],
+            ['DNA Profile', 'What goes viral for you', 'dna', 'activity'],
+            ['Analytics', 'TikTok and YouTube performance', 'analytics', 'chart'],
+            ['Settings', 'Account, connections, workspace', 'settings', 'sliders'],
           ] as const
-        ).map(([t, d, p]) => (
+        ).map(([t, d, p, icon]) => (
           <button className="qa-card" key={t} onClick={() => onNav(p)}>
+            <span className="qa-ic"><Ic name={icon} /></span>
             <strong>{t}</strong>
             <span>{d}</span>
           </button>
@@ -1446,7 +1565,7 @@ function HomePage({
         BRAND ASSETS
       </div>
       <div className="card brand-assets">
-        <div className="ws-avatar big">M</div>
+        <div className="ws-avatar big">{workspaceName[0]?.toUpperCase() ?? 'C'}</div>
         <div>
           <strong>Square Logo</strong>
           <p>Profile / watermark</p>
