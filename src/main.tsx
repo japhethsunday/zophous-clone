@@ -54,7 +54,7 @@ function Nav() {
     <header className="nav-wrap">
       <nav className="nav">
         <a className="logo" href="#top">
-          <span className="logo-mark">C</span> CLOUDNIVO
+          <span className="logo-mark">C</span> Cloudnivo
         </a>
         <div className="nav-links">
           <a href="#top">Home</a>
@@ -184,25 +184,25 @@ function Hero() {
           label="TikTok"
           caption="SCREAMED 'I COULDN'T EVEN FACE'"
           highlight="MY TEAM"
-          tint="linear-gradient(160deg,#2E241B,#40301F 60%,#573D22)"
+          tint="linear-gradient(165deg,#F3E7D3,#EAD9BC 60%,#E2CCAA)"
         />
         <ClipCard
           label="Reels"
           caption="I AM CAN'T WIN IT IF WE CAN'T EVEN RUN"
           highlight="SEC OFFENSE"
-          tint="linear-gradient(160deg,#1E2530,#2B3644 60%,#3A4757)"
+          tint="linear-gradient(165deg,#E1E8F4,#D2DDEE 60%,#C4D2E8)"
         />
         <ClipCard
           label="Shorts"
           caption="THEY TOLD ME I TALK TOO MUCH, SO I MAKE SURE TO MAKE EVERY WORD COUNT."
           highlight="EVERY WORD"
-          tint="linear-gradient(160deg,#1C2620,#28382E 60%,#354C3D)"
+          tint="linear-gradient(165deg,#E4EBDD,#D6E2CB 60%,#C7D8B9)"
         />
         <ClipCard
           label="Reels"
           caption="WE'RE NOT DONE YET — WATCH WHAT HAPPENS NEXT"
           highlight="BE NEXT"
-          tint="linear-gradient(160deg,#2A2517,#3E361E 60%,#57491F)"
+          tint="linear-gradient(165deg,#F6E4DA,#EFD2C2 60%,#E8C0AC)"
         />
       </div>
     </section>
@@ -990,7 +990,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <a className="logo" href="#top">
-          <span className="logo-mark">C</span> CLOUDNIVO
+          <span className="logo-mark">C</span> Cloudnivo
         </a>
         <div className="footer-links">
           <a href="#/about">About</a>
@@ -1020,23 +1020,6 @@ function useRoute() {
 }
 
 function Landing() {
-  useEffect(() => {
-    const sections = document.querySelectorAll('.section, .hero, .stats-row');
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add('in-view');
-            io.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.12 },
-    );
-    sections.forEach((s) => io.observe(s));
-    return () => io.disconnect();
-  }, []);
-
   return (
     <div className="page">
       <Stars />

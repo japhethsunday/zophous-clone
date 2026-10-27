@@ -103,7 +103,7 @@ function SigninGate() {
     <div className="gate">
       <div className="gate-card">
         <div className="logo" style={{ justifyContent: 'center', fontSize: '1rem' }}>
-          <span className="logo-mark">◉</span> CLOUDNIVO
+          <span className="logo-mark">C</span> Cloudnivo
         </div>
         <h2>Sign in to your studio</h2>
         <p className="sub left" style={{ margin: '12px 0 22px' }}>
