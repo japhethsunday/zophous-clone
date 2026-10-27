@@ -89,7 +89,13 @@ input, select, textarea { font-family: inherit; }
 img { max-width: 100%; }
 ::selection { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--ink); }
 
-h1, h2, h3, h4 { font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -.035em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
 .serif {
   font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-style: italic;
@@ -129,7 +135,7 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
 /* ---------- nav ---------- */
 .nav-wrap { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
 .nav { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 30px; padding: 14px 28px; }
-.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; letter-spacing: -.01em; font-family: 'Fraunces', Georgia, serif; }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; letter-spacing: -.02em; font-family: var(--font-display); }
 .logo-mark {
   width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #fff;
   display: inline-grid; place-items: center; font-size: 15px; border: 0;
@@ -360,7 +366,7 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
 /* ---------- app shell ---------- */
 .shell.v2 { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; background: var(--bg); }
 .sidebar { border-right: 1px solid var(--line); background: var(--panel-warm); padding: 18px 14px; display: flex; flex-direction: column; gap: 3px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.v2 .side-logo { font-size: 16px; font-weight: 600; letter-spacing: -.01em; margin-bottom: 4px; font-family: 'Fraunces', Georgia, serif; }
+.v2 .side-logo { font-size: 16px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; font-family: var(--font-display); }
 .v2 .zlogo { width: 30px; height: 30px; font-size: 14px; border-radius: 8px; }
 .ws-link { background: none; border: 0; color: var(--faint); font-size: 12px; font-weight: 600; text-align: left; padding: 2px 8px 12px; cursor: pointer; }
 .nav-group { font-size: 10px; letter-spacing: .2em; color: var(--faint); padding: 14px 8px 5px; font-weight: 700; text-transform: uppercase; }
