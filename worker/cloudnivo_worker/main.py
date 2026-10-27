@@ -9,6 +9,7 @@ import socket
 import time
 from datetime import datetime, timedelta, timezone
 
+from .health import STATE, serve_in_background
 from .pipeline import process
 from .supa import Supa
 
@@ -97,6 +98,8 @@ def main() -> None:
     signal.signal(signal.SIGTERM, _handle_stop)
     signal.signal(signal.SIGINT, _handle_stop)
     db = Supa()
+    if os.environ.get("PORT"):
+        serve_in_background(int(os.environ["PORT"]))
     log.info("worker %s started", WORKER_ID)
     while not _stop:
         try:
@@ -108,7 +111,16 @@ def main() -> None:
         if not jobs:
             time.sleep(IDLE_SLEEP)
             continue
-        run_job(db, jobs[0])
+        STATE["busy"] = True
+        try:
+            run_job(db, jobs[0])
+            STATE["jobs_done"] += 1
+        except Exception:  # noqa: BLE001 - e.g. Supabase briefly unreachable while saving
+            STATE["jobs_failed"] += 1
+            log.exception("job bookkeeping failed; it will be re-queued after 30 minutes")
+        finally:
+            STATE["busy"] = False
+            STATE["last_job_at"] = now()
 
 
 if __name__ == "__main__":

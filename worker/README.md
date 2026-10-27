@@ -16,7 +16,26 @@ writes clips to the private `outputs` bucket and the `clips` table, then keeps t
 minutes (`clip_minutes_settle`) or returns them (`clip_minutes_release`). Failed jobs retry up to
 3 times; jobs from a crashed worker are re-queued after 30 minutes.
 
-## Run on an Oracle Cloud Always Free VM
+## Run on a free Hugging Face Space (current setup)
+
+Space: `recksdev/cloudnivo-worker` (Docker SDK, free CPU basic: 2 vCPU / 16 GB).
+On 2 cores it uses the `base` speech model and skips Ollama (heuristic ranking only).
+
+1. huggingface.co → **New Space**. Name `cloudnivo-worker`, SDK **Docker** → **Blank**, hardware **CPU basic (free)**, visibility **Public**
+   (the page shows only a health status; secrets stay private).
+2. Space → **Settings → Variables and secrets → New secret**:
+   `SUPABASE_URL` = `https://gapzawavgmsnfuekqudo.supabase.co`, and
+   `SUPABASE_SERVICE_ROLE_KEY` = the service_role key (Supabase → Settings → API).
+3. Create an HF **write** token (Settings → Access Tokens), then from the repo root:
+   ```bash
+   bash worker/space/publish.sh recksdev/cloudnivo-worker
+   ```
+   Git asks for credentials: username `recksdev`, password = the write token.
+4. The build takes ~5–10 minutes. https://recksdev-cloudnivo-worker.hf.space/health then shows `"ok": true`.
+
+Supabase pings that page every 6 hours (`worker-keepalive` cron job) so the free Space doesn't go to sleep.
+
+## Run on an Oracle Cloud Always Free VM (alternative)
 
 1. **Create the VM.** cloud.oracle.com → Compute → Instances → Create.
    - Image: **Ubuntu 22.04**. Shape: **Ampere VM.Standard.A1.Flex**, 4 OCPU / 24 GB (Always Free).
