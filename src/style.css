@@ -1119,3 +1119,15 @@ footer, .footer {
 }
 footer a:hover, .footer a:hover { color: #fff; }
 .side-link.on { background: var(--accent-soft); color: var(--accent-deep); font-weight: 650; box-shadow: inset 3px 0 0 var(--accent); }
+
+/* Prompt chips: one swipeable row on phones instead of squashed bubbles */
+.hero-chip { white-space: nowrap; border-radius: var(--radius-pill); }
+@media (max-width: 640px) {
+  .hero-chips {
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
+    scroll-snap-type: x proximity; padding-bottom: 6px; margin-inline: -16px; padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .hero-chips::-webkit-scrollbar { display: none; }
+  .hero-chip { flex: 0 0 auto; scroll-snap-align: start; }
+}

@@ -596,7 +596,7 @@ const FAQS = [
   },
   {
     q: 'Is there really a free plan?',
-    a: 'Yes. The Free plan gives you 60 clipping minutes every month, with AI clips, captions and hooks. Spend them on one long video or split them across up to three shorter ones (each video uses a minimum of 20 minutes). Clips carry a Cloudnivo watermark, and you can make 1 clip a month watermark-free. No credit card required, and new subscribers get a 30-day money-back guarantee.',
+    a: 'Yes. The Free plan gives you 60 clipping minutes every month, with AI clips, captions and hooks. Spend them on one long video or split them across up to three shorter ones (each video uses a minimum of 20 minutes). Clips carry a Cloudnivo watermark, and you can make 1 clip a month watermark-free. No credit card required.',
   },
 ];
 
@@ -921,7 +921,7 @@ function LegalPage({ kind }: { kind: 'terms' | 'privacy' | 'dmca' }) {
   const copy: Record<string, [string, string]> = {
     terms: [
       'Terms of Service',
-      "Cloudnivo never claims ownership of your content. You keep whatever rights you bring, and we never resell or repost it. You're responsible for having the rights to what you upload or clip: clipping content you don't own, without permission or a valid fair-use basis, can infringe the original creator's copyright. Plans are month-to-month, minutes reset monthly and do not roll over, and new subscribers get a 30-day money-back guarantee.",
+      "Cloudnivo never claims ownership of your content. You keep whatever rights you bring, and we never resell or repost it. You're responsible for having the rights to what you upload or clip: clipping content you don't own, without permission or a valid fair-use basis, can infringe the original creator's copyright. Plans are month-to-month, minutes reset monthly and do not roll over.",
     ],
     privacy: [
       'Privacy Policy',
