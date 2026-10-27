@@ -12,7 +12,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 function CheckPill() {
   return (
     <div className="check-pill">
-      <span className="check-dot">✓</span> Free plan · No credit card · 30-day money-back guarantee
+      <span className="check-dot">✓</span> Free plan · No credit card · Cancel anytime
     </div>
   );
 }
@@ -174,7 +174,7 @@ function Hero() {
         </div>
       </div>
       <p className="hero-stats">
-        <strong>202,000+</strong> clips made by <strong>25,000+</strong> creators
+        Clips, AI video and scripts in <strong>one workspace</strong>
       </p>
       <CheckPill />
       <div className="clip-row">
@@ -436,10 +436,10 @@ function Coach() {
 
 function Stats() {
   const stats = [
-    { v: '202K+', l: 'Clips Made' },
-    { v: '25K+', l: 'Creators' },
-    { v: '48K', l: 'Hours Saved' },
-    { v: '8M+', l: 'Views Generated' },
+    { v: '9:16', l: 'Vertical-ready' },
+    { v: '50+', l: 'Caption languages' },
+    { v: 'AI', l: 'Video & image models' },
+    { v: '1', l: 'Credit balance for all' },
   ];
   return (
     <section className="stats-row">
@@ -523,24 +523,23 @@ function WhyCloudnivo() {
     <section className="section" id="why">
       <Eyebrow>Why Cloudnivo</Eyebrow>
       <h2>
-        Smarter clips, <span className="serif">and 2× the minutes</span>.
+        One studio for <span className="serif">every short you make</span>.
       </h2>
       <p className="sub">
-        You came for the AI that actually grows your account. The bonus: you also get more than
-        double the video processing, at the exact same price.
+        Repurpose long videos, generate new ones from a prompt, and keep every clip, script and render in one workspace, instead of juggling five tools and five subscriptions.
       </p>
       <div className="compare">
         <div className="compare-col them">
-          <div className="compare-head">Them</div>
-          <div className="compare-row">150 minutes / mo</div>
-          <div className="compare-row">Clips without feedback</div>
-          <div className="compare-row">Manual posting</div>
+          <div className="compare-head">Five separate tools</div>
+          <div className="compare-row">A clipper, a generator, a script tool…</div>
+          <div className="compare-row">Files scattered across apps</div>
+          <div className="compare-row">A credit balance in every one</div>
         </div>
         <div className="compare-col us">
           <div className="compare-head">Cloudnivo</div>
-          <div className="compare-row">300+ minutes / mo — 2× the minutes</div>
-          <div className="compare-row">Viral DNA learns every post</div>
-          <div className="compare-row">Schedule &amp; post in one place</div>
+          <div className="compare-row">Clip, generate and script in one place</div>
+          <div className="compare-row">Every asset saved to your library</div>
+          <div className="compare-row">One balance, charged only on success</div>
         </div>
       </div>
     </section>
@@ -669,14 +668,14 @@ const PLANS = [
     tagline: 'Get started clipping long-form videos into shorts.',
     price: '$15',
     per: '/mo',
-    badge: '200 minutes / mo · +33% more minutes than OpusClip Starter',
+    badge: '200 minutes / mo',
     feats: [
       '200 minutes of video / mo',
       '3 Studio clips / mo, each with a Director edit',
       'Watermark-free clips',
       'Turbo Downloads: clips ready in about 10 seconds',
-      'DNA Profile & performance analytics',
-      'TikTok & YouTube scheduling + direct posting',
+      'DNA Profile & analytics (coming soon)',
+      'TikTok & YouTube posting (coming soon)',
       '1 Workspace · Email support',
     ],
     cta: 'Get Creator Starter',
@@ -687,14 +686,14 @@ const PLANS = [
     tagline: 'More clips from your long-form videos, faster.',
     price: '$29',
     per: '/mo',
-    badge: '600 minutes / mo · 2× more minutes than OpusClip Pro',
+    badge: '600 minutes / mo · Most popular',
     feats: [
       '600 minutes of video / mo',
       '3 Studio clips / mo, each with a Director edit',
       'Watermark-free clips',
       'Turbo Downloads: clips ready in about 10 seconds',
-      'DNA Profile & performance analytics',
-      'TikTok & YouTube scheduling + direct posting',
+      'DNA Profile & analytics (coming soon)',
+      'TikTok & YouTube posting (coming soon)',
       '3 Workspaces · Priority support',
     ],
     cta: 'Get Creator Pro',
@@ -709,7 +708,7 @@ function Pricing() {
       <h2>
         Start free, <span className="serif">scale when you're ready</span>
       </h2>
-      <p className="sub">Start for free with 60 clipping minutes a month. No credit card required.</p>
+      <p className="sub">Free every month. Upgrade only when you need more minutes.</p>
       <div className="plans">
         {PLANS.map((p) => (
           <div className={`plan${p.featured ? ' featured' : ''}`} key={p.name}>
@@ -783,16 +782,16 @@ function Cta() {
     <section className="section cta">
       <div className="cta-trio">
         <div>
-          <strong>202K+</strong>
-          <span>clips made</span>
+          <strong>Clip</strong>
+          <span>long videos into shorts</span>
         </div>
         <div>
-          <strong>8M+</strong>
-          <span>views generated</span>
+          <strong>Generate</strong>
+          <span>video from a prompt</span>
         </div>
         <div>
-          <strong>48K</strong>
-          <span>hours saved</span>
+          <strong>Keep</strong>
+          <span>every asset in one place</span>
         </div>
       </div>
       <h2>
@@ -959,7 +958,7 @@ function ToolPage({ name }: { name: string }) {
       <p className="sub">
         Paste a link or upload a video, and the AI picks the moments most likely to hold attention,
         cuts them to 9:16, adds captions and a hook, and scores each clip so you know which to post
-        first. The free plan gives you 60 minutes a month, no credit card.
+        first. You can start on the free plan, no card needed.
       </p>
       <div className="dna-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 44 }}>
         {[
