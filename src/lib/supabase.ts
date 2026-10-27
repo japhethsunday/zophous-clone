@@ -107,6 +107,9 @@ export type Generation = {
   provider_job_id: string | null;
   status: 'queued' | 'processing' | 'ready' | 'failed';
   result_url: string | null;
+  /** Private Storage path in the `outputs` bucket; resolved to a signed result_url in the browser. */
+  result_path?: string | null;
+  job_id?: string | null;
   thumb_url: string | null;
   credit_cost: number;
   error: string | null;
@@ -142,12 +145,16 @@ export const PLANS = {
   pro: { name: 'Creator Pro', minutes: 600, studio: 3, credits: 500 },
 } as const;
 
-/** Mirrors the creditCost() table in the generate-media Edge Function. */
-export function creditCostFor(kind: 'video' | 'image', resolution: string, durationSeconds: number | null): number {
-  if (kind === 'image') return 3;
-  const base = resolution === '1080p' ? 32 : 16;
-  const spans = Math.max(1, Math.ceil((durationSeconds ?? 5) / 5));
-  return base * spans;
+/** Same price table the generate-media Edge Function charges (one shared source). */
+export { creditCost as creditCostFor } from '../../supabase/functions/_shared/pricing';
+
+/** Replace each generation's private result_path with a short-lived signed URL for display. */
+export async function withSignedUrls(gens: Generation[]): Promise<Generation[]> {
+  const paths = gens.map((g) => g.result_path).filter((p): p is string => !!p);
+  if (paths.length === 0) return gens;
+  const { data } = await supabase.storage.from('outputs').createSignedUrls(paths, 60 * 60);
+  const byPath = new Map((data ?? []).map((d) => [d.path, d.signedUrl]));
+  return gens.map((g) => (g.result_path && byPath.get(g.result_path) ? { ...g, result_url: byPath.get(g.result_path)! } : g));
 }
 
 /* ---------------- real Zophous model (workspaces + shortform pipeline) ---------------- */

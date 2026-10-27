@@ -6,6 +6,7 @@ import {
   fmtTime,
   ensureWorkspace,
   creditCostFor,
+  withSignedUrls,
   type Profile,
   type Video,
   type Clip,
@@ -468,7 +469,7 @@ function GenPage({
       supabase.from('scripts').select('*').order('created_at', { ascending: false }).limit(30),
       supabase.from('brand_kits').select('*').limit(1),
     ]);
-    setGens((g.data ?? []) as Generation[]);
+    setGens(await withSignedUrls((g.data ?? []) as Generation[]));
     setPrompts((pl.data ?? []) as PromptPreset[]);
     setScripts((sc.data ?? []) as ScriptItem[]);
     setBrand((bk.data?.[0] as BrandKit) ?? null);
@@ -488,7 +489,7 @@ function GenPage({
           body: { mode: 'check', id: g.id },
         });
         if (!error && data?.generation) {
-          const updated = data.generation as Generation;
+          const [updated] = await withSignedUrls([data.generation as Generation]);
           setGens((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)));
           if (updated.status === 'ready') {
             showToast('Generation ready — your video is in the history below');
@@ -554,6 +555,8 @@ function GenPage({
         durationSeconds: model.kind === 'video' ? durationSeconds : undefined,
         formatKey,
         style: applyBrand && brand ? 'brand' : undefined,
+        // One key per click: a retried request returns the same job instead of charging twice.
+        idempotencyKey: crypto.randomUUID(),
       },
     });
     setBusy(false);
@@ -566,7 +569,8 @@ function GenPage({
       showToast('Generation could not be created — try again');
       return;
     }
-    setGens((prev) => [gen, ...(prev ?? [])]);
+    const [signed] = await withSignedUrls([gen]);
+    setGens((prev) => [signed, ...(prev ?? []).filter((x) => x.id !== signed.id)]);
     showToast(
       gen.status === 'ready'
         ? `${model.name} ready — ${cost} credits used`
@@ -875,7 +879,27 @@ function GenPage({
                 <img src={g.result_url} alt={g.prompt.slice(0, 60)} />
               )}
               {(g.status === 'processing' || g.status === 'queued') && (
-                <div className="gen-thumb-note">Rendering…</div>
+                <div className="gen-thumb-note">
+                  Rendering…
+                  {g.job_id && (
+                    <button
+                      type="button"
+                      className="btn sm btn-outline"
+                      onClick={async () => {
+                        const { error } = await supabase.functions.invoke('jobs-cancel', { body: { jobId: g.job_id } });
+                        if (error) {
+                          showToast((await readFnError(error)).message);
+                          return;
+                        }
+                        setGens((prev) => (prev ?? []).map((x) => (x.id === g.id ? { ...x, status: 'failed', error: 'cancelled' } : x)));
+                        showToast('Cancelled — credits returned');
+                        void refresh();
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               )}
               {g.status === 'failed' && <div className="gen-thumb-note failed">Failed · refunded</div>}
             </div>

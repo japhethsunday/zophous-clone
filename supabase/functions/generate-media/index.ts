@@ -1,135 +1,40 @@
-// generate-media: creates real AI video/image jobs via Replicate / OpenAI.
-// Credits are deducted atomically (try_spend_credits RPC) and refunded on failure.
+// generate-media: AI video/image generation as tracked jobs.
+// - Credits: held on create, settled on success, released on failure (credit ledger).
+// - Idempotent: the same idempotencyKey returns the same job instead of charging twice.
+// - Outputs are stored in the private `outputs` bucket (generations.result_path).
 // Provider keys come from Edge secrets: REPLICATE_API_TOKEN, OPENAI_API_KEY.
+// The request/response shape is unchanged for the existing Gen Studio UI.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders, json, readJson } from '../_shared/http.ts';
+import { clampVideoSeconds, creditCost } from '../_shared/pricing.ts';
+import {
+  OPENAI_KEY,
+  REPLICATE_MODELS,
+  REPLICATE_TOKEN,
+  adminClient,
+  advanceGenerationJob,
+  enrichGeneration,
+  failJob,
+  openAIImage,
+  startReplicate,
+  storeOutput,
+  userFromRequest,
+} from '../_shared/generation.ts';
 
-const SUPA_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const REPLICATE_TOKEN = Deno.env.get('REPLICATE_API_TOKEN') ?? '';
-const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
-
-// Replicate model ids (open-source-compatible endpoints)
-const REPLICATE_MODELS: Record<string, string> = {
-  'seedance-fast': 'bytedance/seedance-1-lite',
-  'seedance-pro': 'bytedance/seedance-1-pro',
-  'kling-2.1': 'kwaivgi/kling-v2.1',
-};
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function creditCost(kind: string, resolution: string, durationSeconds: number | null): number {
-  if (kind === 'image') return 3;
-  const base = resolution === '1080p' ? 32 : 16;
-  const spans = Math.max(1, Math.ceil((durationSeconds ?? 5) / 5));
-  return base * spans;
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
-}
-
-async function authedUser(req: Request) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return null;
-  const admin = createClient(SUPA_URL, SERVICE_KEY);
-  const { data } = await admin.auth.getUser(token);
-  return data.user ?? null;
-}
-
-async function startReplicate(model: string, body: Record<string, unknown>) {
-  const r = await fetch('https://api.replicate.com/v1/models/' + model + '/predictions', {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + REPLICATE_TOKEN,
-      'Content-Type': 'application/json',
-      Prefer: 'respond-async',
-    },
-    body: JSON.stringify({ input: body }),
-  });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.detail ?? j.title ?? 'replicate_error_' + r.status);
-  return j.id as string;
-}
-
-async function checkReplicate(jobId: string) {
-  const r = await fetch('https://api.replicate.com/v1/predictions/' + jobId, {
-    headers: { Authorization: 'Bearer ' + REPLICATE_TOKEN },
-  });
-  return await r.json();
-}
-
-async function startOpenAIImage(prompt: string, aspect: string) {
-  const size = aspect === '16:9' ? '1536x1024' : aspect === '1:1' ? '1024x1024' : '1024x1536';
-  const r = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + OPENAI_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-image-1', prompt, size, n: 1 }),
-  });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error?.message ?? 'openai_error_' + r.status);
-  const b64 = j.data?.[0]?.b64_json;
-  if (!b64) throw new Error('openai_no_image');
-  return 'data:image/png;base64,' + b64;
-}
-
-// After a generation is ready, ask GPT for a real virality estimate + posting metadata.
-// Best-effort: any failure leaves the row untouched (no fake scores, no fake hashtags).
-async function enrichGeneration(admin: ReturnType<typeof createClient>, id: string, kind: string, prompt: string) {
-  if (!OPENAI_KEY) return;
-  try {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + OPENAI_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a short-form video strategist. Given an AI-generated ' + kind +
-              ' prompt, estimate how well content like it performs on TikTok/Reels/Shorts. ' +
-              'Reply with JSON only: {"score": <integer 1-100>, "description": "<one-sentence post description>", "hashtags": ["<tag>", ...]} ' +
-              'with 4-6 hashtags, no # symbols.',
-          },
-          { role: 'user', content: prompt.slice(0, 800) },
-        ],
-      }),
-    });
-    if (!r.ok) return;
-    const j = await r.json();
-    const parsed = JSON.parse(j.choices?.[0]?.message?.content ?? '{}');
-    const score = Math.max(1, Math.min(100, Number(parsed.score) || 0));
-    if (!score) return;
-    const meta: Record<string, unknown> = { description: String(parsed.description ?? '').slice(0, 300) };
-    if (Array.isArray(parsed.hashtags)) {
-      meta.hashtags = parsed.hashtags.slice(0, 8).map((t: unknown) => String(t).replace(/^#/, ''));
-    }
-    await admin.from('generations').update({ virality_score: score, meta }).eq('id', id);
-  } catch {
-    // enrichment is optional — never fail the generation over it
-  }
-}
+const ASPECTS = new Set(['9:16', '16:9', '1:1']);
+const RESOLUTIONS = new Set(['720p', '1080p']);
+const IMAGE_MODELS = new Set(['gpt-image']);
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return json(req, { error: 'method_not_allowed' }, 405);
 
-  const user = await authedUser(req);
-  if (!user) return json({ error: 'unauthorized' }, 401);
-  const admin = createClient(SUPA_URL, SERVICE_KEY);
+  const admin = adminClient();
+  const user = await userFromRequest(admin, req);
+  if (!user) return json(req, { error: 'unauthorized' }, 401);
 
-  let payload: Record<string, unknown>;
-  try {
-    payload = await req.json();
-  } catch {
-    return json({ error: 'invalid_json' }, 400);
-  }
+  const payload = await readJson(req);
+  if (!payload) return json(req, { error: 'invalid_json' }, 400);
   const mode = String(payload.mode ?? 'create');
 
   try {
@@ -137,103 +42,113 @@ Deno.serve(async (req) => {
     if (mode === 'create') {
       const kind = payload.kind === 'image' ? 'image' : 'video';
       const model = String(payload.model ?? (kind === 'image' ? 'gpt-image' : 'seedance-fast'));
-      const prompt = String(payload.prompt ?? '').trim();
-      if (!prompt) return json({ error: 'prompt_required' }, 400);
-      const aspect = String(payload.aspect ?? '9:16');
-      const resolution = String(payload.resolution ?? '720p');
-      const durationSeconds = kind === 'video' ? Math.max(5, Math.min(10, Number(payload.durationSeconds ?? 5))) : null;
-      const formatKey = payload.formatKey ? String(payload.formatKey) : null;
-      const style = payload.style ? String(payload.style) : null;
-
+      if (kind === 'video' && !REPLICATE_MODELS[model]) return json(req, { error: 'unknown_model' }, 400);
+      if (kind === 'image' && !IMAGE_MODELS.has(model)) return json(req, { error: 'unknown_model' }, 400);
+      const prompt = String(payload.prompt ?? '').trim().slice(0, 2000);
+      if (!prompt) return json(req, { error: 'prompt_required' }, 400);
+      const aspect = ASPECTS.has(String(payload.aspect)) ? String(payload.aspect) : '9:16';
+      const resolution = RESOLUTIONS.has(String(payload.resolution)) ? String(payload.resolution) : '720p';
+      const durationSeconds = kind === 'video' ? clampVideoSeconds(payload.durationSeconds) : null;
+      const formatKey = payload.formatKey ? String(payload.formatKey).slice(0, 80) : null;
+      const style = payload.style ? String(payload.style).slice(0, 40) : null;
+      const idem = payload.idempotencyKey ? String(payload.idempotencyKey).slice(0, 80) : null;
       const cost = creditCost(kind, resolution, durationSeconds);
 
-      // provider configuration check BEFORE spending credits
       if (kind === 'video' && !REPLICATE_TOKEN) {
-        return json({ error: 'PROVIDER_NOT_CONFIGURED', message: 'Video generation needs a Replicate API token. Add REPLICATE_API_TOKEN to the Edge Function secrets.' }, 503);
+        return json(req, { error: 'PROVIDER_NOT_CONFIGURED', message: 'Video generation needs a Replicate API token. Add REPLICATE_API_TOKEN to the Edge Function secrets.' }, 503);
       }
       if (kind === 'image' && !OPENAI_KEY) {
-        return json({ error: 'PROVIDER_NOT_CONFIGURED', message: 'Image generation needs an OpenAI API key. Add OPENAI_API_KEY to the Edge Function secrets.' }, 503);
+        return json(req, { error: 'PROVIDER_NOT_CONFIGURED', message: 'Image generation needs an OpenAI API key. Add OPENAI_API_KEY to the Edge Function secrets.' }, 503);
       }
 
-      const { data: ok } = await admin.rpc('try_spend_credits', { p_user: user.id, p_cost: cost });
-      if (!ok) return json({ error: 'INSUFFICIENT_CREDITS', needed: cost }, 402);
+      // Same submit retried: return what already exists.
+      if (idem) {
+        const { data: existing } = await admin.from('jobs').select('ref_id').eq('user_id', user.id).eq('idempotency_key', idem).maybeSingle();
+        if (existing?.ref_id) {
+          const { data: gen } = await admin.from('generations').select('*').eq('id', existing.ref_id).single();
+          if (gen) return json(req, { generation: gen, creditsCharged: 0, duplicate: true });
+        }
+      }
 
-      const { data: gen, error: insErr } = await admin
-        .from('generations')
+      const provider = kind === 'video' ? 'replicate' : 'openai';
+      const { data: job, error: jobErr } = await admin
+        .from('jobs')
         .insert({
-          user_id: user.id, kind, model, prompt, format_key: formatKey, aspect,
-          duration_seconds: durationSeconds, resolution, style, credit_cost: cost, status: 'queued',
+          user_id: user.id, kind: 'generation', status: 'queued', provider, ref_table: 'generations',
+          idempotency_key: idem, input: { kind, model, prompt, aspect, resolution, durationSeconds, formatKey, style },
+          deadline_at: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
         })
         .select()
         .single();
-      if (insErr || !gen) {
-        await admin.rpc('refund_credits', { p_user: user.id, p_amount: cost });
-        return json({ error: 'insert_failed', detail: String(insErr?.message ?? insErr) }, 500);
+      if (jobErr || !job) {
+        // A parallel request with the same key won the insert.
+        if (idem) return json(req, { error: 'duplicate_in_progress' }, 409);
+        return json(req, { error: 'insert_failed', detail: jobErr?.message }, 500);
       }
+
+      const { data: held } = await admin.rpc('credit_hold', { p_user: user.id, p_job: job.id, p_amount: cost });
+      if (!held) {
+        await admin.from('jobs').update({ status: 'failed', error: 'INSUFFICIENT_CREDITS', completed_at: new Date().toISOString() }).eq('id', job.id);
+        return json(req, { error: 'INSUFFICIENT_CREDITS', needed: cost }, 402);
+      }
+
+      const { data: gen, error: genErr } = await admin
+        .from('generations')
+        .insert({
+          user_id: user.id, kind, model, prompt, format_key: formatKey, aspect, duration_seconds: durationSeconds,
+          resolution, style, credit_cost: cost, status: 'queued', provider, job_id: job.id,
+        })
+        .select()
+        .single();
+      if (genErr || !gen) {
+        await failJob(admin, job, 'insert_failed');
+        return json(req, { error: 'insert_failed', detail: genErr?.message }, 500);
+      }
+      const jobRow = { ...job, ref_id: gen.id, cost_quoted: cost };
+      await admin.from('jobs').update({ ref_id: gen.id }).eq('id', job.id);
 
       try {
         if (kind === 'video') {
-          const replicateModel = REPLICATE_MODELS[model] ?? REPLICATE_MODELS['seedance-fast'];
-          const jobId = await startReplicate(replicateModel, {
-            prompt,
-            aspect_ratio: aspect,
-            duration: durationSeconds,
-            resolution: resolution === '1080p' ? '1080p' : '720p',
+          const predictionId = await startReplicate(REPLICATE_MODELS[model], {
+            prompt, aspect_ratio: aspect, duration: durationSeconds, resolution,
           });
-          await admin.from('generations').update({ provider: 'replicate', provider_job_id: jobId, status: 'processing' }).eq('id', gen.id);
-          return json({ generation: { ...gen, status: 'processing' }, creditsCharged: cost });
-        } else {
-          const dataUrl = await startOpenAIImage(prompt, aspect);
-          const { data: updated } = await admin
-            .from('generations')
-            .update({ provider: 'openai', status: 'ready', result_url: dataUrl, completed_at: new Date().toISOString() })
-            .eq('id', gen.id)
-            .select()
-            .single();
-          await enrichGeneration(admin, gen.id, 'image', prompt);
-          const { data: enriched } = await admin.from('generations').select('*').eq('id', gen.id).single();
-          return json({ generation: enriched ?? updated ?? gen, creditsCharged: cost });
+          await admin.from('jobs').update({ status: 'running', provider_ref: predictionId, progress: 5, next_poll_at: new Date(Date.now() + 10000).toISOString() }).eq('id', job.id);
+          await admin.from('generations').update({ provider_job_id: predictionId, status: 'processing' }).eq('id', gen.id);
+          return json(req, { generation: { ...gen, status: 'processing' }, creditsCharged: cost });
         }
+
+        const bytes = await openAIImage(prompt, aspect);
+        const path = await storeOutput(admin, user.id, job.id, 'image.png', bytes, 'image/png');
+        const now = new Date().toISOString();
+        await admin.from('jobs').update({ status: 'succeeded', progress: 100, output: { path }, completed_at: now }).eq('id', job.id);
+        await admin.from('generations').update({ status: 'ready', result_path: path, completed_at: now }).eq('id', gen.id);
+        await admin.rpc('credit_settle', { p_job: job.id, p_actual: cost });
+        await enrichGeneration(admin, gen.id, 'image', prompt);
+        const { data: done } = await admin.from('generations').select('*').eq('id', gen.id).single();
+        return json(req, { generation: done ?? gen, creditsCharged: cost });
       } catch (providerErr) {
         const msg = providerErr instanceof Error ? providerErr.message : String(providerErr);
-        await admin.from('generations').update({ status: 'failed', error: msg, completed_at: new Date().toISOString() }).eq('id', gen.id);
-        await admin.rpc('refund_credits', { p_user: user.id, p_amount: cost });
-        return json({ error: 'PROVIDER_ERROR', message: msg, refunded: cost }, 502);
+        await failJob(admin, jobRow, msg);
+        return json(req, { error: 'PROVIDER_ERROR', message: msg, refunded: cost }, 502);
       }
     }
 
     // ---------- check ----------
     if (mode === 'check') {
       const id = String(payload.id ?? '');
-      const { data: gen } = await admin.from('generations').select('*').eq('id', id).eq('user_id', user.id).single();
-      if (!gen) return json({ error: 'not_found' }, 404);
-      if (gen.status !== 'processing' || gen.provider !== 'replicate' || !gen.provider_job_id) {
-        return json({ generation: gen });
+      const { data: gen } = await admin.from('generations').select('*').eq('id', id).eq('user_id', user.id).maybeSingle();
+      if (!gen) return json(req, { error: 'not_found' }, 404);
+      if (gen.status === 'processing' && gen.job_id) {
+        const { data: job } = await admin.from('jobs').select('*').eq('id', gen.job_id).single();
+        if (job) await advanceGenerationJob(admin, job);
+        const { data: fresh } = await admin.from('generations').select('*').eq('id', id).single();
+        return json(req, { generation: fresh ?? gen });
       }
-      const job = await checkReplicate(gen.provider_job_id);
-      if (job.status === 'succeeded') {
-        const out = Array.isArray(job.output) ? job.output[0] : job.output;
-        const { data: updated } = await admin
-          .from('generations')
-          .update({ status: 'ready', result_url: out, completed_at: new Date().toISOString() })
-          .eq('id', gen.id)
-          .select()
-          .single();
-        await enrichGeneration(admin, gen.id, 'video', gen.prompt);
-        const { data: enriched } = await admin.from('generations').select('*').eq('id', gen.id).single();
-        return json({ generation: enriched ?? updated });
-      }
-      if (job.status === 'failed' || job.status === 'canceled') {
-        await admin.from('generations').update({ status: 'failed', error: String(job.error ?? 'provider_failed'), completed_at: new Date().toISOString() }).eq('id', gen.id);
-        await admin.rpc('refund_credits', { p_user: user.id, p_amount: gen.credit_cost });
-        return json({ generation: { ...gen, status: 'failed', error: String(job.error ?? 'provider_failed') }, refunded: gen.credit_cost });
-      }
-      return json({ generation: gen });
+      return json(req, { generation: gen });
     }
 
-    return json({ error: 'unknown_mode' }, 400);
+    return json(req, { error: 'unknown_mode' }, 400);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return json({ error: 'internal', message: msg }, 500);
+    return json(req, { error: 'internal', message: e instanceof Error ? e.message : String(e) }, 500);
   }
 });
