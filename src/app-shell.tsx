@@ -188,7 +188,7 @@ function SigninGate() {
         <div className="logo" style={{ justifyContent: 'center', fontSize: '1rem' }}>
           <span className="logo-mark">C</span> Cloudnivo
         </div>
-        <h2>Sign in to your studio</h2>
+        <h1 style={{ fontSize: 22 }}>Sign in to your studio</h1>
         <p className="sub left" style={{ margin: '12px 0 22px' }}>
           Clip long videos, schedule posts, and build your viral DNA. The Free plan gives you 60
           clipping minutes a month — no credit card required.
