@@ -127,13 +127,11 @@ function Hero() {
     <section className="hero" id="top">
       <Eyebrow>AI-Powered Video Clipping</Eyebrow>
       <h1>
-        Your long videos,
-        <br />
-        turned into <span className="serif">daily shorts</span>.
+        Your long videos, turned into <span className="serif">daily shorts</span>.
       </h1>
       <p className="sub">
         Paste a link and get captioned, scored clips — or describe what you want and our AI
-        <br className="desktop-br" /> generates it. Both live in one studio.
+        generates it. Both live in one studio.
       </p>
       <div className="hero-inputs">
         <div className="hero-input-row">

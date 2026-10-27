@@ -108,7 +108,9 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'Inter', -apple-system, 'Segoe UI', system-ui, Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -126,10 +128,11 @@ h1, h2, h3, h4 {
   text-wrap: balance;
 }
 .serif {
-  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
-  font-style: italic;
-  font-weight: 560;
-  letter-spacing: -.015em;
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  color: var(--accent);
   padding: 0 2px;
 }
 
@@ -192,15 +195,17 @@ h1, h2, h3, h4 {
 .check-dot { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--brand-fg); display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; }
 
 .hero { max-width: 1440px; margin: 0 auto; padding: 84px 28px 72px; text-align: center; position: relative; }
-.hero h1 { font-size: clamp(40px, 6vw, 74px); max-width: 880px; margin: 0 auto; letter-spacing: -.025em; }
-.hero .sub { margin: 24px auto 0; max-width: 600px; }
+.hero h1 {
+  font-size: clamp(28px, 4.5vw, 46px);
+  max-width: 760px; margin: 0 auto;
+  font-weight: 500; letter-spacing: -.04em; line-height: 1.15;
+}
+.hero .sub { margin: 22px auto 0; max-width: 640px; text-wrap: balance; }
 .sub { font-size: 16.5px; line-height: 1.7; color: var(--muted); font-weight: 500; }
 .sub.left { text-align: left; }
 .hero-ctas { display: flex; gap: 14px; justify-content: center; margin-top: 38px; flex-wrap: wrap; }
 .hero-stats { margin-top: 26px; font-size: 14px; color: var(--faint); font-weight: 600; }
 .hero-stats strong { color: var(--ink); }
-.desktop-br { display: none; }
-@media (min-width: 720px) { .desktop-br { display: block; } }
 
 .clip-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 60px; }
 @media (max-width: 900px) { .clip-row { grid-template-columns: repeat(2, 1fr); } }
