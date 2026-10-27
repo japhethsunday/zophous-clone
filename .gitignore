@@ -8,3 +8,6 @@ tsconfig.tsbuildinfo
 .env*
 
 vercel-deploy*.log
+!worker/.env.example
+worker/.env
+__pycache__/

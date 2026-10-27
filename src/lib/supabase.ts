@@ -54,6 +54,10 @@ export type Video = {
   status: 'queued' | 'analyzing' | 'ready' | 'failed';
   duration_seconds: number;
   created_at: string;
+  source_path?: string | null;
+  progress?: number;
+  error?: string | null;
+  job_id?: string | null;
 };
 
 export type Clip = {
@@ -69,6 +73,11 @@ export type Clip = {
   caption_style: string;
   watermarked: boolean;
   thumb_url?: string | null;
+  /** Real rendered clip (Phase 3 worker): private Storage paths + signed URLs for display. */
+  clip_path?: string | null;
+  thumb_path?: string | null;
+  clip_url?: string | null;
+  transcript?: string | null;
   platform: string | null;
   posted_at: string | null;
   created_at: string;
@@ -237,4 +246,29 @@ export function fmtTime(s: number) {
   const m = Math.floor(s / 60);
   const sec = Math.round(s % 60);
   return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+/** Resolve rendered clip + thumbnail paths to short-lived signed URLs. */
+export async function withSignedClips(clips: Clip[]): Promise<Clip[]> {
+  const paths = clips.flatMap((c) => [c.clip_path, c.thumb_path]).filter((p): p is string => !!p);
+  if (paths.length === 0) return clips;
+  const { data } = await supabase.storage.from('outputs').createSignedUrls(paths, 60 * 60);
+  const url = new Map((data ?? []).map((d) => [d.path, d.signedUrl]));
+  return clips.map((c) => ({
+    ...c,
+    clip_url: c.clip_path ? url.get(c.clip_path) ?? null : null,
+    thumb_url: c.thumb_path ? url.get(c.thumb_path) ?? c.thumb_url ?? null : c.thumb_url ?? null,
+  }));
+}
+
+/** Read a local video file's duration in seconds without uploading it. */
+export function readVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('video');
+    const url = URL.createObjectURL(file);
+    el.preload = 'metadata';
+    el.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(el.duration); };
+    el.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read this video file.')); };
+    el.src = url;
+  });
 }

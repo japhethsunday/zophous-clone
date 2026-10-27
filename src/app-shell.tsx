@@ -7,6 +7,8 @@ import {
   ensureWorkspace,
   creditCostFor,
   withSignedUrls,
+  withSignedClips,
+  readVideoDuration,
   type Profile,
   type Video,
   type Clip,
@@ -20,6 +22,7 @@ import {
   type ScriptItem,
   type BrandKit,
 } from './lib/supabase';
+import { uploadSource } from './lib/uploads';
 
 /* ---------------- helpers ---------------- */
 
@@ -267,6 +270,16 @@ function ClipBreakdown({ clip }: { clip: Clip }) {
   );
 }
 
+function friendlyClipError(code: string): string {
+  const map: Record<string, string> = {
+    video_too_short: 'The video is too short to clip (under 20 seconds).',
+    no_audio_track: 'This video has no sound, so there is nothing to transcribe.',
+    no_speech_found: 'No speech was found in this video.',
+    OUT_OF_MINUTES: 'Not enough minutes left this month.',
+  };
+  return map[code] ?? 'Processing failed. Your minutes were returned.';
+}
+
 function ClipCardView({
   clip,
   onPost,
@@ -280,7 +293,16 @@ function ClipCardView({
   return (
     <div className="app-clip">
       <div className="app-clip-screen" style={{ aspectRatio: '9/16' }} onClick={() => onOpen?.(clip)}>
-        {clip.thumb_url ? (
+        {clip.clip_url ? (
+          <video
+            className="app-clip-thumb"
+            src={clip.clip_url}
+            poster={clip.thumb_url ?? undefined}
+            controls
+            playsInline
+            preload="none"
+          />
+        ) : clip.thumb_url ? (
           <img className="app-clip-thumb" src={clip.thumb_url} alt="" loading="lazy" />
         ) : (
           <div className="app-clip-ph"><Ic name="play" size={22} /></div>
@@ -986,7 +1008,7 @@ export default function AppShell() {
     ]);
     if (p.data) setProfile(p.data as Profile);
     if (v.data) setVideos(v.data as Video[]);
-    if (c.data) setClips(c.data as Clip[]);
+    if (c.data) setClips(await withSignedClips(c.data as Clip[]));
     if (po.data) setPosts(po.data as Post[]);
     if (d.data) setDna(d.data as DnaPattern[]);
     if (mj.data) setSfJobs(mj.data as ShortformJob[]);
@@ -997,6 +1019,14 @@ export default function AppShell() {
       /* workspace load is non-fatal */
     }
   }, []);
+
+  // While the worker is processing an upload, refresh so progress and finished clips appear.
+  const processing = videos.some((v) => v.status === 'queued' || v.status === 'analyzing');
+  useEffect(() => {
+    if (!processing) return;
+    const t = setInterval(() => void refresh(), 8000);
+    return () => clearInterval(t);
+  }, [processing, refresh]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -1074,6 +1104,43 @@ export default function AppShell() {
       await refresh();
     },
     [profile, markChecklist, refresh, showToast],
+  );
+
+  // Real clipping: upload the file, then queue a job for the open-source worker.
+  const uploadAndClip = useCallback(
+    async (file: File, title: string, onStage: (s: string) => void) => {
+      if (!profile) return false;
+      try {
+        onStage('Reading video…');
+        const duration = await readVideoDuration(file);
+        const needed = Math.max(1, Math.ceil(duration / 60));
+        const left = profile.minutes_limit - profile.minutes_used;
+        if (needed > left) {
+          showToast(`This video needs ${needed} minutes; you have ${left} left this month.`);
+          return false;
+        }
+        onStage('Uploading…');
+        const asset = await uploadSource(file, profile.plan);
+        onStage('Queuing…');
+        const { error } = await supabase.functions.invoke('clips-create', {
+          body: { assetId: asset.id, title: title || file.name.replace(/\.[^.]+$/, ''), durationSeconds: duration, idempotencyKey: crypto.randomUUID() },
+        });
+        if (error) {
+          showToast((await readFnError(error)).message);
+          return false;
+        }
+        await markChecklist('first_video');
+        showToast('Uploaded. Clips usually take a few minutes; this page updates by itself.');
+        await refresh();
+        return true;
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Upload failed');
+        return false;
+      } finally {
+        onStage('');
+      }
+    },
+    [profile, refresh, showToast, markChecklist],
   );
 
   const createShortformJob = useCallback(
@@ -1339,6 +1406,7 @@ export default function AppShell() {
             whoseOpen={whoseOpen}
             setWhoseOpen={setWhoseOpen}
             onCreate={createVideo}
+            onUpload={uploadAndClip}
             onPost={setPostClip}
             onUpgrade={() => setPage('billing')}
           />
@@ -1615,6 +1683,7 @@ function ClipsPage({
   whoseOpen,
   setWhoseOpen,
   onCreate,
+  onUpload,
   onPost,
   onUpgrade,
 }: {
@@ -1625,10 +1694,13 @@ function ClipsPage({
   whoseOpen: boolean;
   setWhoseOpen: (v: boolean) => void;
   onCreate: (o: { title: string; sourceUrl?: string; sourceType: 'link' | 'upload'; mode: 'clips' | 'studio'; durationMinutes: number }) => void;
+  onUpload: (file: File, title: string, onStage: (s: string) => void) => Promise<boolean>;
   onPost: (c: Clip) => void;
   onUpgrade: () => void;
 }) {
-  const [tab, setTab] = useState<'link' | 'upload'>('link');
+  const [tab, setTab] = useState<'link' | 'upload'>('upload');
+  const [file, setFile] = useState<File | null>(null);
+  const [stage, setStage] = useState('');
   const [url, setUrl] = useState(() => {
     const v = sessionStorage.getItem('cn_link') ?? '';
     if (v) sessionStorage.removeItem('cn_link');
@@ -1714,24 +1786,39 @@ function ClipsPage({
           </div>
         ) : (
           <div className="form-row">
-            <input className="input" placeholder="Video title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <input
-              className="input small"
-              type="number"
-              min={1}
-              max={180}
-              value={mins}
-              onChange={(e) => setMins(Number(e.target.value) || 1)}
-              title="Duration in minutes"
-            />
+            <label className="input grow file-pick">
+              <input
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  setFile(f);
+                  if (f && !title.trim()) setTitle(f.name.replace(/\.[^.]+$/, ''));
+                }}
+              />
+              <span>{file ? `${file.name} · ${(file.size / 1048576).toFixed(0)} MB` : 'Choose an MP4, MOV or WebM file'}</span>
+            </label>
+            <input className="input" placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
             <button
               className="btn btn-purple"
-              disabled={!title.trim()}
-              onClick={() => onCreate({ title: title.trim(), sourceType: 'upload', mode: 'clips', durationMinutes: mins })}
+              disabled={!file || !!stage}
+              onClick={async () => {
+                if (!file) return;
+                const ok = await onUpload(file, title.trim(), setStage);
+                if (ok) {
+                  setFile(null);
+                  setTitle('');
+                }
+              }}
             >
-              Generate Clips
+              {stage || 'Generate Clips'}
             </button>
           </div>
+        )}
+        {tab === 'link' && (
+          <p className="form-note">
+            Link import shows a sample preview for now. For real clips, download your own video and use Upload.
+          </p>
         )}
         <p className="form-note">
           {profile.plan === 'free'
@@ -1756,7 +1843,10 @@ function ClipsPage({
             <div className="video-block" key={v.id}>
               <div className="video-head">
                 <strong>{v.title}</strong>
-                <span className={`status s-${v.status}`}>{v.status}</span>
+                <span className={`status s-${v.status}`}>
+                  {v.status === 'analyzing' && v.progress ? `analyzing · ${v.progress}%` : v.status}
+                </span>
+                {v.status === 'failed' && v.error && <span className="form-note">{friendlyClipError(v.error)}</span>}
                 {vclips.length > 0 && (
                   <button className="btn btn-outline sm" onClick={() => setOpenSet(v.id)}>
                     Explore →

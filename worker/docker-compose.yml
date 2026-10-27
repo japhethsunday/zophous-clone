@@ -1,0 +1,25 @@
+services:
+  ollama:
+    image: ollama/ollama:0.6.8
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    # Pull the ranking model once on first start.
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}; wait"]
+
+  worker:
+    build:
+      context: .
+      args:
+        WHISPER_MODEL: ${WHISPER_MODEL:-small}
+    restart: unless-stopped
+    depends_on: [ollama]
+    env_file: .env
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    # Each worker handles one job at a time; scale with:  docker compose up -d --scale worker=2
+    mem_limit: 6g
+
+volumes:
+  ollama:

@@ -1131,3 +1131,10 @@ footer a:hover, .footer a:hover { color: #fff; }
   .hero-chips::-webkit-scrollbar { display: none; }
   .hero-chip { flex: 0 0 auto; scroll-snap-align: start; }
 }
+
+/* File picker on the Clips upload tab */
+.file-pick { position: relative; display: flex; align-items: center; cursor: pointer; color: var(--muted); overflow: hidden; }
+.file-pick input[type='file'] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.file-pick span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-pick:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.app-clip-screen video.app-clip-thumb { width: 100%; height: 100%; object-fit: cover; background: var(--surface-media); }
