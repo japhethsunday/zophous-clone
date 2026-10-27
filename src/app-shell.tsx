@@ -1045,7 +1045,7 @@ export default function AppShell() {
         showToast(fnErr.message);
         await supabase.from('videos').update({ status: 'failed' }).eq('id', data.id);
       } else {
-        showToast(opts.mode === 'studio' ? 'Studio clips ready!' : 'Clips ready!');
+        showToast('Preview clips ready (sample data; real video clipping is coming soon)');
       }
       await refresh();
     },
@@ -1141,11 +1141,8 @@ export default function AppShell() {
         return;
       }
       await supabase.from('shortform_jobs').update({ status: 'ready' }).eq('id', job.id);
-      await supabase
-        .from('profiles')
-        .update({ current_credits: Math.max(0, (profile.current_credits ?? 0) - opts.minutes) })
-        .eq('id', profile.id);
-      showToast(`Studio job ready — ${letters.length} variations generated`);
+      // Credits are server-only now; this preview job doesn't spend any.
+      showToast(`Preview job ready — ${letters.length} sample variations (real Studio rendering coming soon)`);
       await refresh();
     },
     [profile, managers, refresh, showToast],
@@ -2498,19 +2495,8 @@ function BillingPage({
   };
 
   async function subscribe(key: 'starter' | 'pro') {
-    const plan = PLANS[key];
-    await supabase
-      .from('profiles')
-      .update({
-        plan: key,
-        minutes_limit: plan.minutes,
-        studio_clips_limit: plan.studio,
-        credits_limit: plan.credits,
-        credits_balance: plan.credits,
-      })
-      .eq('id', profile.id);
-    showToast(`${plan.name} applied — ${plan.credits} AI credits added`);
-    refresh();
+    // Plans can only change through the payment webhook (Phase 7). The browser never writes plan or credits.
+    showToast(`Online checkout for ${PLANS[key].name} is coming soon.`);
   }
 
   return (
@@ -2690,14 +2676,9 @@ function SettingsPage({
               <div className="conn-row" key={key}>
                 <span>{label}</span>
                 <em className="conn-state">{profile[key] ? 'Connected' : 'Not connected'}</em>
-                <button
-                  className={`btn sm ${profile[key] ? 'btn-outline' : 'btn-purple'}`}
-                  onClick={async () => {
-                    await supabase.from('profiles').update({ [key]: !profile[key] }).eq('id', profile.id);
-                    onConnected();
-                  }}
-                >
-                  {profile[key] ? '✓ Connected' : 'Connect'}
+                {/* Real OAuth lands in Phase 6. Until then nothing is posted, so don't pretend to connect. */}
+                <button className="btn sm btn-outline" disabled title="Coming soon">
+                  Coming soon
                 </button>
               </div>
             ))}

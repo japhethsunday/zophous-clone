@@ -74,6 +74,8 @@ Deno.serve(async (req) => {
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return json({ error: 'unauthorized' }, 401);
+  // Quota counters are server-only (profiles_guard_protected), so read/write them with the service role.
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
   let body: { videoId?: string };
   try {
@@ -91,7 +93,7 @@ Deno.serve(async (req) => {
     .single();
   if (vErr || !video) return json({ error: 'video not found' }, 404);
 
-  const { data: profile } = await supabase
+  const { data: profile } = await admin
     .from('profiles')
     .select('*')
     .eq('id', user.id)
@@ -166,12 +168,12 @@ Deno.serve(async (req) => {
   await supabase.from('videos').update({ status: 'ready' }).eq('id', videoId);
 
   if (isStudio) {
-    await supabase
+    await admin
       .from('profiles')
       .update({ studio_clips_used: profile.studio_clips_used + count })
       .eq('id', user.id);
   } else {
-    await supabase
+    await admin
       .from('profiles')
       .update({ minutes_used: profile.minutes_used + minutesCharged })
       .eq('id', user.id);
