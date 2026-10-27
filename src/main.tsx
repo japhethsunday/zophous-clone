@@ -154,7 +154,7 @@ function Hero() {
             onChange={(e) => setIdea(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && goGen()}
           />
-          <button className="btn btn-ghost" onClick={goGen}>
+          <button className="btn btn-outline" onClick={goGen}>
             Generate it →
           </button>
         </div>
