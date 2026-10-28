@@ -1,9 +1,11 @@
 // Cloudflare Workers static assets (the successor to Cloudflare Pages).
-// Deploy: npm run build && npx wrangler deploy
+// Deploy: npx wrangler deploy (builds first, see "build")
 {
   "$schema": "https://unpkg.com/wrangler@4/config-schema.json",
   "name": "cloudnivo",
   "compatibility_date": "2026-10-23",
+  // Always build before deploy/upload, so Workers Builds works even with an empty build command.
+  "build": { "command": "npm run build" },
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
