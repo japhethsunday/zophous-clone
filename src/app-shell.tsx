@@ -960,6 +960,14 @@ export default function AppShell() {
   const [session, setSession] = useState<boolean | null>(null);
   const [page, setPage] = useState<Page>(pageFromHash);
   const [menu, setMenu] = useState<null | 'more' | 'account'>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [collapsed, setCollapsedState] = useState(() => {
+    try { return localStorage.getItem('cn_side_collapsed') === '1'; } catch { return false; }
+  });
+  const setCollapsed = (v: boolean) => {
+    setCollapsedState(v);
+    try { localStorage.setItem('cn_side_collapsed', v ? '1' : '0'); } catch { /* private mode */ }
+  };
   // Close the top-bar menus on any outside click or Escape.
   useEffect(() => {
     if (!menu) return;
@@ -1263,109 +1271,126 @@ export default function AppShell() {
   if (!session) return <SigninGate />;
 
   return (
-    <div className={`shell topnav${page === 'gen' ? ' gen-mode' : ''}`}>
-      <header className="topbar">
-        <a className="logo top-logo" href="#/app/home" onClick={(e) => { e.preventDefault(); setPage('home'); }}>
-          <span className="logo-mark">C</span> <span className="top-logo-text">Cloudnivo</span>
-        </a>
-        <nav className="top-tabs" aria-label="Main">
+    <div className={`shell pro${collapsed ? ' is-collapsed' : ''}${page === 'gen' ? ' gen-mode' : ''}`}>
+      <div className="mob-bar">
+        <button className="mob-burger" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+          <span /><span /><span />
+        </button>
+        <span className="logo"><span className="logo-mark">C</span> Cloudnivo</span>
+        {profile && <span className="mob-credits">{profile.credits_balance} cr</span>}
+      </div>
+      {navOpen && <div className="nav-scrim" onClick={() => setNavOpen(false)} />}
+
+      <aside className={`pro-side${collapsed ? ' collapsed' : ''}${navOpen ? ' open' : ''}`} aria-label="Main navigation">
+        <div className="ps-head">
+          <span className="logo-mark">C</span>
+          <div className="ps-ws">
+            <strong>{managers[0]?.name ?? 'My Workspace'}</strong>
+            <span>{profile ? PLANS[profile.plan].name : ''}</span>
+          </div>
+          <button
+            className="ps-collapse"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand' : 'Collapse'}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? '»' : '«'}
+          </button>
+        </div>
+
+        <button className="ps-new" onClick={() => { setPage('gen'); setNavOpen(false); }} title="Create something new">
+          <Ic name="sparkles" size={16} /> <span>New creation</span>
+        </button>
+
+        <nav className="ps-nav">
           {(
             [
-              ['home', 'Home', 'home'],
-              ['clips', 'Clips', 'scissors'],
-              ['studio', 'Studio', 'film'],
-              ['gen', 'Generate', 'sparkles'],
-              ['posts', 'Posts', 'calendar'],
+              ['', [
+                ['home', 'Dashboard', 'home'],
+              ]],
+              ['Create', [
+                ['clips', 'Clips', 'scissors'],
+                ['studio', 'Studio', 'film'],
+                ['gen', 'Generate', 'sparkles'],
+              ]],
+              ['Publish', [
+                ['posts', 'Posts', 'calendar'],
+                ['analytics', 'Analytics', 'chart'],
+                ['dna', 'DNA Profile', 'activity'],
+              ]],
+              ['Workspace', [
+                ['brand', 'Brand kit', 'diamond'],
+                ['billing', 'Billing', 'card'],
+                ['settings', 'Settings', 'sliders'],
+              ]],
             ] as const
-          ).map(([id, label, icon]) => (
-            <button
-              key={id}
-              className={`top-tab${page === id ? ' on' : ''}`}
-              aria-current={page === id ? 'page' : undefined}
-              onClick={() => { setPage(id); setMenu(null); }}
-            >
-              <Ic name={icon} size={15} /> {label}
-            </button>
+          ).map(([group, items]) => (
+            <div className="ps-group" key={group || 'main'}>
+              {group && <div className="ps-label">{group}</div>}
+              {items.map(([id, label, icon]) => (
+                <button
+                  key={id}
+                  className={`ps-link${page === id ? ' on' : ''}`}
+                  aria-current={page === id ? 'page' : undefined}
+                  title={collapsed ? label : undefined}
+                  onClick={() => { setPage(id); setNavOpen(false); }}
+                >
+                  <Ic name={icon} size={17} />
+                  <span>{label}</span>
+                  {id === 'home' && doneCount < 4 && <em className="ps-badge">{doneCount}/4</em>}
+                </button>
+              ))}
+            </div>
           ))}
-          <div className="top-menu">
-            <button
-              className={`top-tab${['brand', 'dna', 'analytics'].includes(page) ? ' on' : ''}`}
-              aria-expanded={menu === 'more'}
-              onClick={() => setMenu(menu === 'more' ? null : 'more')}
-            >
-              More ▾
-            </button>
-            {menu === 'more' && (
-              <div className="top-pop" role="menu">
-                {(
-                  [
-                    ['brand', 'Brand kit', 'diamond'],
-                    ['dna', 'DNA Profile', 'activity'],
-                    ['analytics', 'Analytics', 'chart'],
-                  ] as const
-                ).map(([id, label, icon]) => (
-                  <button key={id} role="menuitem" onClick={() => { setPage(id); setMenu(null); }}>
-                    <Ic name={icon} size={15} /> {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </nav>
 
-        <div className="top-right">
-          {profile && (
-            <button className="top-meter" onClick={() => setPage('billing')} title="Your monthly allowance">
-              <span><b>{minutesLeft}</b> min</span>
-              <span><b>{profile.credits_balance}</b> credits</span>
-            </button>
-          )}
-          {profile?.plan === 'free' && (
-            <button className="btn btn-purple sm" onClick={() => setPage('billing')}>
-              Upgrade
-            </button>
-          )}
-          <div className="top-menu">
-            <button
-              className="top-avatar"
-              aria-label="Account menu"
-              aria-expanded={menu === 'account'}
-              onClick={() => setMenu(menu === 'account' ? null : 'account')}
-            >
-              {(profile?.display_name ?? 'C').slice(0, 1).toUpperCase()}
-            </button>
-            {menu === 'account' && (
-              <div className="top-pop right" role="menu">
-                {profile && (
-                  <div className="top-pop-head">
-                    <strong>{PLANS[profile.plan].name}</strong>
-                    <span>Resets {resetLabel()}</span>
-                  </div>
-                )}
-                <button role="menuitem" onClick={() => { setPage('home'); setMenu(null); }}>
-                  Getting started · {doneCount}/4
-                </button>
-                <button role="menuitem" onClick={() => { setPage('billing'); setMenu(null); }}>
-                  <Ic name="card" size={15} /> Billing
-                </button>
-                <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); }}>
-                  <Ic name="sliders" size={15} /> Settings
-                </button>
-                <a role="menuitem" href="#/">← Back to site</a>
-                <button
-                  role="menuitem"
-                  onClick={async () => {
-                    await supabase.auth.signOut();
-                    setSession(false);
-                  }}
-                >
-                  Sign out
-                </button>
-              </div>
+        {profile && (
+          <div className="ps-usage" title="Monthly allowance">
+            <div className="ps-meter">
+              <div><span>Minutes</span><b>{minutesLeft}/{profile.minutes_limit}</b></div>
+              <i><u style={{ width: `${profile.minutes_limit ? Math.min(100, Math.round((minutesLeft / profile.minutes_limit) * 100)) : 0}%` }} /></i>
+            </div>
+            <div className="ps-meter">
+              <div><span>Credits</span><b>{profile.credits_balance}</b></div>
+              <i><u className="alt" style={{ width: `${PLANS[profile.plan].credits ? Math.min(100, Math.round((profile.credits_balance / PLANS[profile.plan].credits) * 100)) : 0}%` }} /></i>
+            </div>
+            {profile.plan === 'free' && (
+              <button className="btn btn-purple sm ps-upgrade" onClick={() => { setPage('billing'); setNavOpen(false); }}>
+                <Ic name="zap" size={14} /> <span>Upgrade</span>
+              </button>
             )}
           </div>
+        )}
+
+        <div className="ps-user top-menu">
+          <button
+            className="ps-user-btn"
+            aria-expanded={menu === 'account'}
+            onClick={() => setMenu(menu === 'account' ? null : 'account')}
+          >
+            <span className="top-avatar">{(profile?.display_name ?? 'C').slice(0, 1).toUpperCase()}</span>
+            <span className="ps-user-name">{profile?.display_name ?? 'Account'}</span>
+            <span className="ps-chev">⋯</span>
+          </button>
+          {menu === 'account' && (
+            <div className="top-pop up" role="menu">
+              <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); setNavOpen(false); }}>
+                <Ic name="sliders" size={15} /> Settings
+              </button>
+              <a role="menuitem" href="#/">← Back to site</a>
+              <button
+                role="menuitem"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setSession(false);
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
-      </header>
+      </aside>
 
       <main className="app-main">
         {toast && <div className="toast">{toast}</div>}
