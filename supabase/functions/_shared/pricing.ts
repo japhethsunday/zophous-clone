@@ -14,6 +14,9 @@ export const FREE_MODELS: Record<string, { kind: MediaKind; credits: number; nam
   'flux-free': { kind: 'image', credits: 1, name: 'FLUX schnell (free)' },
   'wan-free': { kind: 'video', credits: 6, name: 'Wan 2.2 (free)' },
   'story-free': { kind: 'video', credits: 15, name: 'Story video (free)' },
+  // Cloudflare Workers AI free tier (falls back to FLUX on Hugging Face when Cloudflare isn't configured).
+  'flux-schnell-cf': { kind: 'image', credits: 1, name: 'FLUX schnell, fast (free)' },
+  'lucid-origin-cf': { kind: 'image', credits: 2, name: 'Lucid Origin (free)' },
 };
 
 export function clampVideoSeconds(n: unknown): number {

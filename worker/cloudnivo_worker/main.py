@@ -36,6 +36,12 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _cf_enabled() -> bool:
+    from .cloudflare_ai import enabled
+
+    return enabled()
+
+
 def run_generation_job(db: Supa, job: dict) -> None:
     """Free image/video generation (open models on Hugging Face ZeroGPU)."""
     import tempfile
@@ -60,6 +66,11 @@ def run_generation_job(db: Supa, job: dict) -> None:
                 name, mime = "story.mp4", "video/mp4"
                 db.upload("outputs", f"{uid}/{jid}/story.jpg", thumb, "image/jpeg")
                 extra = {"meta": {"description": info["title"], "scenes": info["scenes"], "seconds": info["seconds"]}}
+            elif inp.get("kind") == "image" and str(inp.get("model", "")).endswith("-cf") and _cf_enabled():
+                from .cloudflare_ai import make_image as cf_image
+
+                path = cf_image(inp["model"], inp["prompt"], inp.get("aspect", "9:16"), tmp)
+                name, mime = "image.jpg", "image/jpeg"
             elif inp.get("kind") == "image":
                 path = make_image(inp["prompt"], inp.get("aspect", "9:16"), tmp)
                 name, mime = "image" + os.path.splitext(path)[1], "image/webp" if path.endswith(".webp") else "image/png"

@@ -30,9 +30,19 @@ Candidates:
 
 
 def rank_with_llm(cands: list[Candidate], timeout: int = 240) -> list[Candidate]:
+    """Cloudflare Workers AI first (free tier), then local Ollama, else keep the heuristic."""
     if not cands:
         return cands
     lines = [f"[{i}] ({c.duration:.0f}s) {c.text[:700]}" for i, c in enumerate(cands)]
+    from . import cloudflare_ai
+
+    if cloudflare_ai.enabled():
+        try:
+            data = cloudflare_ai.chat_json(PROMPT + "\n".join(lines))
+            log.info("ranked with Cloudflare Workers AI")
+            return _apply(cands, data)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Cloudflare ranking failed, trying Ollama: %s", e)
     try:
         r = requests.post(
             f"{OLLAMA_URL}/api/generate",
@@ -50,7 +60,10 @@ def rank_with_llm(cands: list[Candidate], timeout: int = 240) -> list[Candidate]
     except Exception as e:  # network, model missing, bad JSON
         log.warning("ollama ranking skipped: %s", e)
         return cands
+    return _apply(cands, data)
 
+
+def _apply(cands: list[Candidate], data: dict) -> list[Candidate]:
     for item in data.get("clips", []):
         try:
             c = cands[int(item["id"])]

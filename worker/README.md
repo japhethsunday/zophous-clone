@@ -80,3 +80,21 @@ Queued by the `clips-render` Edge Function when a user edits a clip. The job rea
 and framing, swaps the clip's file and deletes the old one. On failure the clip is left untouched. No minutes are charged.
 
 PyAV is pinned (`av==16.0.1`): faster-whisper 1.1.1 crashes on newer PyAV.
+
+## Cloudflare Workers AI (free, optional, recommended)
+
+Add two secrets to the worker (Hugging Face Space → Settings → Variables and secrets):
+
+| Secret | Value |
+|---|---|
+| `CF_ACCOUNT_ID` | Cloudflare dashboard → Workers AI → your account ID |
+| `CF_API_TOKEN` | Cloudflare → My Profile → API Tokens → Create token → "Workers AI" template |
+
+With them set, the worker uses (free tier: 10,000 Neurons/day):
+
+- **Transcription:** `@cf/openai/whisper-large-v3-turbo` (~210 audio minutes/day free), instead of CPU Whisper.
+- **Clip ranking and titles:** `@cf/google/gemma-4-26b-a4b-it`, instead of the keyword heuristic.
+- **Images:** `flux-schnell-cf` (FLUX.1 schnell) and `lucid-origin-cf` (Leonardo Lucid Origin) on the Generate page.
+
+Every call falls back to the local models when Cloudflare is not configured, fails or the daily allowance runs out.
+Override models with `CF_WHISPER_MODEL`, `CF_TEXT_MODEL`.
