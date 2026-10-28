@@ -1309,3 +1309,37 @@ a.bento-card:hover { border-color: var(--accent-line); box-shadow: var(--shadow-
   .app-top .mob-burger { display: grid; }
   .top-meter span:last-child { display: none; }
 }
+
+/* Sidebar bottom: usage card + user button */
+.ps-usage { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.ps-meter { display: grid; gap: 6px; }
+.ps-meter > div { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.ps-meter b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.ps-meter i { display: block; height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.ps-meter u { display: block; height: 100%; border-radius: inherit; background: var(--accent); text-decoration: none; }
+.ps-meter u.alt { background: var(--accent-2); }
+.ps-user { position: relative; }
+.ps-user-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border-radius: 12px; border: 0;
+  background: var(--panel); cursor: pointer; color: var(--ink); font: 650 14px var(--font-sans); text-align: left;
+}
+.ps-user-btn:hover { background: var(--panel-warm); }
+.ps-user-btn .top-avatar { width: 34px; height: 34px; font-size: 14px; flex: none; }
+.ps-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ps-chev { margin-left: auto; color: var(--faint); }
+.is-collapsed .ps-usage, .is-collapsed .ps-user-name, .is-collapsed .ps-chev { display: none; }
+.is-collapsed .ps-user-btn { justify-content: center; background: none; }
+@media (max-width: 860px) {
+  .is-collapsed .ps-usage, .is-collapsed .ps-user-name, .is-collapsed .ps-chev { display: revert; }
+  .is-collapsed .ps-usage { display: grid; }
+}
+
+/* Spacing fixes (right side of the app) */
+.app-top { margin: 0 0 32px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.app-top-right { gap: 14px; }
+.page-head, .page-head-row { margin-bottom: 22px; gap: 20px; }
+.page-actions { gap: 12px; }
+.home-top { gap: 24px; }
+.home-side { gap: 20px; }
+.home-side .card { margin: 0; }
+@media (max-width: 860px) { .app-top { margin: -20px -16px 22px; padding: 10px 16px; } }

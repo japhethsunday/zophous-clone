@@ -177,9 +177,9 @@ function SigninGate() {
   return (
     <div className="gate">
       <div className="gate-card">
-        <div className="logo" style={{ justifyContent: 'center', fontSize: '1rem' }}>
+        <a className="logo" href="#/" style={{ justifyContent: 'center', fontSize: '1rem', textDecoration: 'none', color: 'inherit' }}>
           <span className="logo-mark">C</span> Cloudnivo
-        </div>
+        </a>
         <h1 style={{ fontSize: 22 }}>Sign in to your studio</h1>
         <p className="sub left" style={{ margin: '12px 0 22px' }}>
           Clip long videos, schedule posts, and build your viral DNA. The Free plan gives you 60
@@ -188,9 +188,6 @@ function SigninGate() {
         <button className="btn btn-purple big" onClick={() => auth.openSignInModal()}>
           Sign in / Create account
         </button>
-        <a className="gate-back" href="#/">
-          ← Back to site
-        </a>
       </div>
     </div>
   );
@@ -959,7 +956,7 @@ export default function AppShell() {
   };
   const [session, setSession] = useState<boolean | null>(null);
   const [page, setPage] = useState<Page>(pageFromHash);
-  const [menu, setMenu] = useState<null | 'more' | 'account'>(null);
+  const [menu, setMenu] = useState<null | 'more' | 'account' | 'side-account'>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [collapsed, setCollapsedState] = useState(() => {
     try { return localStorage.getItem('cn_side_collapsed') === '1'; } catch { return false; }
@@ -1334,6 +1331,51 @@ export default function AppShell() {
             </div>
           ))}
         </nav>
+
+        {profile && (
+          <div className="ps-usage" title="Monthly allowance">
+            <div className="ps-meter">
+              <div><span>Minutes</span><b>{minutesLeft}/{profile.minutes_limit}</b></div>
+              <i><u style={{ width: `${profile.minutes_limit ? Math.min(100, Math.round((minutesLeft / profile.minutes_limit) * 100)) : 0}%` }} /></i>
+            </div>
+            <div className="ps-meter">
+              <div><span>Credits</span><b>{profile.credits_balance}</b></div>
+              <i><u className="alt" style={{ width: `${PLANS[profile.plan].credits ? Math.min(100, Math.round((profile.credits_balance / PLANS[profile.plan].credits) * 100)) : 0}%` }} /></i>
+            </div>
+          </div>
+        )}
+
+        <div className="ps-user top-menu">
+          <button
+            className="ps-user-btn"
+            aria-label="Account menu"
+            aria-expanded={menu === 'side-account'}
+            onClick={() => setMenu(menu === 'side-account' ? null : 'side-account')}
+          >
+            <span className="top-avatar">{(profile?.display_name ?? 'C').slice(0, 1).toUpperCase()}</span>
+            <span className="ps-user-name">{profile?.display_name ?? 'Account'}</span>
+            <span className="ps-chev">⋯</span>
+          </button>
+          {menu === 'side-account' && (
+            <div className="top-pop up" role="menu">
+              <button role="menuitem" onClick={() => { setPage('billing'); setMenu(null); setNavOpen(false); }}>
+                <Ic name="card" size={15} /> Billing &amp; plan
+              </button>
+              <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); setNavOpen(false); }}>
+                <Ic name="sliders" size={15} /> Settings
+              </button>
+              <button
+                role="menuitem"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setSession(false);
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
 
       <main className="app-main">
@@ -1376,7 +1418,6 @@ export default function AppShell() {
                   <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); }}>
                     <Ic name="sliders" size={15} /> Settings
                   </button>
-                  <a role="menuitem" href="#/">← Back to site</a>
                   <button
                     role="menuitem"
                     onClick={async () => {
