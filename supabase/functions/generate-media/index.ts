@@ -6,7 +6,7 @@
 // The request/response shape is unchanged for the existing Gen Studio UI.
 
 import { corsHeaders, json, readJson } from '../_shared/http.ts';
-import { FREE_MODELS, clampVideoSeconds, creditCost } from '../_shared/pricing.ts';
+import { FREE_MODELS, VOICE_MAX_CHARS, clampVideoSeconds, creditCost, voiceCredits } from '../_shared/pricing.ts';
 import {
   OPENAI_KEY,
   REPLICATE_MODELS,
@@ -41,8 +41,13 @@ Deno.serve(async (req) => {
     // ---------- create with a free open model (queued for the self-hosted worker) ----------
     if (mode === 'create' && FREE_MODELS[String(payload.model)]) {
       const model = String(payload.model);
-      const { kind, credits } = FREE_MODELS[model];
-      const prompt = String(payload.prompt ?? '').trim().slice(0, 1500);
+      const { kind } = FREE_MODELS[model];
+      const isVoice = kind === 'audio';
+      const prompt = String(payload.prompt ?? '').trim().slice(0, isVoice ? VOICE_MAX_CHARS : 1500);
+      const credits = isVoice ? voiceCredits(prompt.length) : FREE_MODELS[model].credits;
+      // Kokoro voice ids look like af_heart or bm_george; the first letter sets the language.
+      const voice = /^[a-z]{2}_[a-z]{2,20}$/.test(String(payload.voice)) ? String(payload.voice) : 'af_heart';
+      const speed = Math.max(0.7, Math.min(1.3, Number(payload.speed) || 1));
       if (!prompt) return json(req, { error: 'prompt_required' }, 400);
       const aspect = ASPECTS.has(String(payload.aspect)) ? String(payload.aspect) : '9:16';
       const durationSeconds = kind !== 'video' ? null
@@ -64,7 +69,9 @@ Deno.serve(async (req) => {
         .insert({
           user_id: user.id, kind: 'generation', status: 'queued', provider: 'hf-zerogpu', ref_table: 'generations',
           idempotency_key: idem,
-          input: { kind, model, prompt, aspect, durationSeconds, watermark: (prof?.plan ?? 'free') === 'free' },
+          input: isVoice
+            ? { kind, model, prompt, voice, speed }
+            : { kind, model, prompt, aspect, durationSeconds, watermark: (prof?.plan ?? 'free') === 'free' },
         })
         .select()
         .single();
@@ -79,7 +86,9 @@ Deno.serve(async (req) => {
         .from('generations')
         .insert({
           user_id: user.id, kind, model, prompt, aspect, duration_seconds: durationSeconds ? Math.round(durationSeconds) : null,
-          resolution: '480p', credit_cost: credits, status: 'queued', provider: 'hf-zerogpu', job_id: job.id,
+          resolution: isVoice ? 'audio' : '480p', credit_cost: credits, status: 'queued',
+          provider: isVoice ? 'kokoro' : 'hf-zerogpu', job_id: job.id,
+          ...(isVoice ? { style: voice, meta: { voice, speed, chars: prompt.length } } : {}),
         })
         .select()
         .single();

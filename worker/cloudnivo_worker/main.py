@@ -66,6 +66,16 @@ def run_generation_job(db: Supa, job: dict) -> None:
                 name, mime = "story.mp4", "video/mp4"
                 db.upload("outputs", f"{uid}/{jid}/story.jpg", thumb, "image/jpeg")
                 extra = {"meta": {"description": info["title"], "scenes": info["scenes"], "seconds": info["seconds"]}}
+            elif inp.get("model") == "voice-kokoro":
+                from .voice import make_voice
+
+                def vprogress(pct: int) -> None:
+                    db.update("jobs", f"id=eq.{jid}", {"progress": pct, "output": {"stage": "speaking"}})
+
+                path, seconds = make_voice(inp["prompt"], inp.get("voice", "af_heart"), inp.get("speed", 1.0), tmp, vprogress)
+                name, mime = "voice.mp3", "audio/mpeg"
+                extra = {"duration_seconds": max(1, round(seconds)),
+                         "meta": {"voice": inp.get("voice"), "speed": inp.get("speed"), "seconds": round(seconds, 1)}}
             elif inp.get("kind") == "image" and str(inp.get("model", "")).endswith("-cf") and _cf_enabled():
                 from .cloudflare_ai import make_image as cf_image
 
@@ -268,6 +278,22 @@ def main() -> None:
         return
     db = Supa()
     log.info("worker %s started", WORKER_ID)
+
+    # Load the voice model in the background so the first voiceover doesn't wait for it.
+    def _warm_voice() -> None:
+        try:
+            from .story import _tts
+            from .voice import make_voice
+            import tempfile
+            _tts()
+            with tempfile.TemporaryDirectory() as d:
+                make_voice("Ready.", "af_heart", 1.0, d)
+            log.info("voice model ready")
+        except Exception:  # noqa: BLE001
+            log.warning("voice warm-up failed", exc_info=True)
+
+    import threading
+    threading.Thread(target=_warm_voice, daemon=True).start()
     while not _stop:
         try:
             jobs = db.rpc("claim_job", {"p_worker": WORKER_ID, "p_kinds": WORKER_KINDS}) or []

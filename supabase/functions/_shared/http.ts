@@ -5,6 +5,10 @@ const DEFAULT_ORIGINS = [
   'https://www.cloudnivo.org',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  // Docker (docker compose: web on 8080) and `vite preview`.
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  'http://localhost:4173',
 ];
 
 function allowedOrigins(): string[] {

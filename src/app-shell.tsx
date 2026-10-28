@@ -28,11 +28,18 @@ const ClipsLibrary = lazy(() => import('./clips/ClipsLibrary'));
 const ClipWorkspace = lazy(() => import('./clips/ClipWorkspace'));
 const HomePage = lazy(() => import('./home'));
 const Studio = lazy(() => import('./studio/Studio'));
+const Voiceover = lazy(() => import('./voice/Voiceover'));
 
 /* ---------------- helpers ---------------- */
 
 /* Inline SVG icon set — 16px, 1.5px stroke, currentColor (no dependency) */
 const IC_PATHS: Record<string, React.ReactNode> = {
+  mic: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </>
+  ),
   home: (
     <>
       <path d="M3 10.5 12 3l9 7.5" />
@@ -133,6 +140,7 @@ type Page =
   | 'clips'
   | 'studio'
   | 'gen'
+  | 'voice'
   | 'posts'
   | 'brand'
   | 'dna'
@@ -234,7 +242,7 @@ function GenPage({
 
   const load = useCallback(async () => {
     const [g, pl, sc, bk] = await Promise.all([
-      supabase.from('generations').select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('generations').select('*').neq('kind', 'audio').order('created_at', { ascending: false }).limit(50),
       supabase.from('prompt_library').select('*').order('sort', { ascending: true }),
       supabase.from('scripts').select('*').order('created_at', { ascending: false }).limit(30),
       supabase.from('brand_kits').select('*').limit(1),
@@ -637,7 +645,7 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
-  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'brand', 'settings'];
+  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'voice', 'brand', 'settings'];
   const pageFromHash = (): Page => {
     const m = location.hash.match(/^#\/app\/([a-z]+)/);
     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
@@ -798,6 +806,7 @@ export default function AppShell() {
                 ['clips', 'Clips', 'scissors'],
                 ['studio', 'Studio', 'sparkles'],
                 ['gen', 'Video & story', 'film'],
+                ['voice', 'Voiceover', 'mic'],
               ]],
               ['Brand', [
                 ['brand', 'Brand kit', 'diamond'],
@@ -958,6 +967,12 @@ export default function AppShell() {
         {page === 'studio' && profile && (
           <Suspense fallback={<div className="page-pad" aria-busy="true" />}>
             <Studio tool={tool} onTool={(t) => go('studio', t)} showToast={showToast} />
+          </Suspense>
+        )}
+
+        {page === 'voice' && profile && (
+          <Suspense fallback={<div className="page-pad" aria-busy="true" />}>
+            <Voiceover profile={profile} showToast={showToast} refresh={refresh} />
           </Suspense>
         )}
 

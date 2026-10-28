@@ -1,0 +1,84 @@
+/* Voiceover page. Tokens come from the v4 layer in style.css. */
+.vo { display: flex; flex-direction: column; gap: 24px; max-width: 1180px; }
+.vo-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+.vo-head h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.02em; }
+.vo-head p { margin: 0; color: var(--muted); font-size: 14.5px; }
+.vo-credits { font: 500 12.5px/1 var(--font-mono); color: var(--muted); border: 1px solid var(--line); background: var(--raise); padding: 7px 10px; border-radius: 999px; white-space: nowrap; }
+
+.vo-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: stretch; }
+.vo-editor, .vo-side { background: var(--raise); border: 1px solid var(--line); border-radius: 12px; }
+
+/* editor */
+.vo-editor { display: flex; flex-direction: column; position: relative; min-height: 480px; }
+.vo-voicebar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.vo-voicebar strong { display: block; font-size: 14px; }
+.vo-voicebar span { font-size: 12.5px; color: var(--faint); }
+.vo-text { flex: 1; width: 100%; border: 0; outline: 0; resize: none; padding: 20px; font: 400 17px/1.7 var(--font-sans); color: var(--ink); background: transparent; }
+.vo-text::placeholder { color: var(--faint); }
+.vo-sample { position: absolute; left: 20px; top: 112px; border: 1px solid var(--line); background: var(--raise); border-radius: 999px; padding: 6px 12px; font-size: 13px; color: var(--muted); }
+.vo-sample:hover { border-color: var(--ink); color: var(--ink); }
+.vo-foot { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-top: 1px solid var(--line); }
+.vo-count { flex: 1; font: 400 12px/1 var(--font-mono); color: var(--faint); }
+.vo-cost { font: 500 12.5px/1 var(--font-mono); color: var(--muted); }
+.vo-go { padding: 10px 18px !important; }
+.vo-go:disabled { opacity: .45; }
+
+/* play buttons */
+.vo-play { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--raise); color: var(--ink); display: grid; place-items: center; transition: background .15s, border-color .15s; }
+.vo-play:hover { border-color: var(--ink); }
+.vo-play.on { background: var(--signal); border-color: var(--signal); }
+.vo-play.sm { width: 28px; height: 28px; }
+
+/* voice library */
+.vo-side { display: flex; flex-direction: column; overflow: hidden; max-height: 620px; }
+.vo-filters { padding: 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.vo-search { width: 100%; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; background: var(--raise); }
+.vo-row { display: flex; gap: 8px; }
+.vo-row select { flex: 1; min-width: 0; border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 8px; font-size: 13px; background: var(--raise); color: var(--ink); }
+.vo-seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 8px; background: var(--panel-warm); border: 1px solid var(--line); }
+.vo-seg button { border: 0; background: transparent; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; color: var(--muted); }
+.vo-seg button.on { background: var(--raise); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+.vo-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1; }
+.vo-list li { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.vo-list li:hover { background: var(--panel); }
+.vo-list li.on { background: var(--accent-soft); border-color: var(--line-strong); }
+.vo-li-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.vo-li-txt strong { font-size: 13.5px; font-weight: 600; }
+.vo-li-txt span { font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vo-list em { font-style: normal; font: 400 11px/1 var(--font-mono); color: var(--faint); white-space: nowrap; }
+.vo-none { color: var(--faint); font-size: 13px; cursor: default !important; }
+.vo-speed { padding: 12px 14px 14px; border-top: 1px solid var(--line); }
+.vo-speed-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+.vo-speed-top span { font: 500 12.5px var(--font-mono); }
+.vo-speed input { width: 100%; accent-color: var(--ink); }
+.vo-speed-ends { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--faint); }
+.vo-speed-ends button { border: 0; background: none; font-size: 11.5px; color: var(--muted); text-decoration: underline; padding: 0; }
+
+/* history */
+.vo-history h2 { font-size: 15px; margin: 0 0 10px; }
+.vo-empty { color: var(--faint); font-size: 14px; margin: 0; }
+.vo-history ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--raise); overflow: hidden; }
+.vo-item { display: flex; gap: 16px; align-items: flex-start; padding: 14px 16px; border-top: 1px solid var(--line); }
+.vo-item:first-child { border-top: 0; }
+.vo-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.vo-item-main > p { margin: 0; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vo-item-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font: 400 12px/1.4 var(--font-mono); color: var(--faint); }
+.vo-item-meta span + span::before { content: '·'; margin-right: 10px; }
+.vo-audio { width: 100%; max-width: 520px; height: 36px; margin-top: 2px; }
+.vo-progress { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.vo-progress i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--ink); animation: vo-spin .8s linear infinite; }
+@keyframes vo-spin { to { transform: rotate(360deg); } }
+.vo-fail { margin: 0; font-size: 12.5px; color: var(--danger); }
+.vo-item-actions { display: flex; gap: 6px; flex: none; }
+
+@media (max-width: 980px) {
+  .vo-grid { grid-template-columns: 1fr; }
+  .vo-side { max-height: 460px; }
+  .vo-editor { min-height: 360px; }
+}
+@media (max-width: 600px) {
+  .vo-head { flex-direction: column; align-items: flex-start; }
+  .vo-item { flex-direction: column; }
+  .vo-foot { flex-wrap: wrap; }
+  .vo-go { width: 100%; justify-content: center; }
+}
