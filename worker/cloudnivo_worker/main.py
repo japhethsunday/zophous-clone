@@ -82,7 +82,11 @@ def run_generation_job(db: Supa, job: dict) -> None:
                 "status": "queued", "error": msg,
                 "next_poll_at": (datetime.now(timezone.utc) + timedelta(minutes=wait)).isoformat(),
             })
-            db.update("generations", f"id=eq.{gid}", {"status": "queued"})
+            retry_at = (datetime.now(timezone.utc) + timedelta(minutes=wait)).isoformat()
+            db.update("generations", f"id=eq.{gid}", {
+                "status": "queued",
+                "meta": {"wait": "gpu_quota" if quota else "retry", "retry_at": retry_at, "attempt": int(job.get("attempts", 1))},
+            })
             return
         db.update("jobs", f"id=eq.{jid}", {"status": "failed", "error": msg, "completed_at": now()})
         db.update("generations", f"id=eq.{gid}", {"status": "failed", "error": msg, "completed_at": now()})

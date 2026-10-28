@@ -123,7 +123,7 @@ export type Generation = {
   credit_cost: number;
   error: string | null;
   virality_score: number | null;
-  meta: { description?: string; hashtags?: string[] } | null;
+  meta: { description?: string; hashtags?: string[]; wait?: string; retry_at?: string; attempt?: number } | null;
   created_at: string;
   completed_at: string | null;
 };

@@ -781,81 +781,71 @@ function GenPage({
       )}
 
       <h3 className="gen-sec-h">Recent generations</h3>
-      <div className="gen-history">
+      <div className="gen-history gh-list">
         {gens === null && <div className="gen-empty">Loading…</div>}
         {gens !== null && gens.length === 0 && (
-          <div className="gen-empty">Nothing yet — your first generation will appear here.</div>
+          <div className="gen-empty">No generations yet. Your results will appear here.</div>
         )}
-        {gens?.map((g) => (
-          <div key={g.id} className="gen-row">
-            <div className={`gen-thumb ${g.aspect === '16:9' ? 'wide' : 'tall'}`}>
-              {g.status === 'ready' && g.result_url && g.kind === 'video' && (
-                <video src={g.result_url} controls playsInline preload="metadata" />
-              )}
-              {g.status === 'ready' && g.result_url && g.kind === 'image' && (
-                <img src={g.result_url} alt={g.prompt.slice(0, 60)} />
-              )}
-              {(g.status === 'processing' || g.status === 'queued') && (
-                <div className="gen-thumb-note">
-                  Rendering…
-                  {g.job_id && (
-                    <button
-                      type="button"
-                      className="btn sm btn-outline"
-                      onClick={async () => {
-                        const { error } = await supabase.functions.invoke('jobs-cancel', { body: { jobId: g.job_id } });
-                        if (error) {
-                          showToast((await readFnError(error)).message);
-                          return;
-                        }
-                        setGens((prev) => (prev ?? []).map((x) => (x.id === g.id ? { ...x, status: 'failed', error: 'cancelled' } : x)));
-                        showToast('Cancelled — credits returned');
-                        void refresh();
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              )}
-              {g.status === 'failed' && <div className="gen-thumb-note failed">Failed · refunded</div>}
-            </div>
-            <div className="gen-row-body">
-              <strong>
-                {g.prompt}
-                {g.status === 'ready' && g.virality_score != null && (
-                  <span
-                    className={`gen-score${g.virality_score >= 75 ? ' hot' : ''}`}
-                    title="AI estimate of how well content like this performs on TikTok/Reels/Shorts"
-                  >
-                    {g.virality_score}
-                  </span>
+        {gens?.map((g) => {
+          const busyRow = g.status === 'processing' || g.status === 'queued';
+          const waiting = g.status === 'queued' && g.meta?.wait === 'gpu_quota';
+          const retryAt = g.meta?.retry_at ? new Date(g.meta.retry_at) : null;
+          const statusLabel =
+            g.status === 'ready' ? 'Ready'
+            : g.status === 'failed' ? (g.error === 'cancelled' ? 'Cancelled' : 'Failed')
+            : waiting ? 'Waiting for GPU'
+            : g.status === 'processing' ? 'Rendering'
+            : 'Queued';
+          const cancel = async () => {
+            const { error } = await supabase.functions.invoke('jobs-cancel', { body: { jobId: g.job_id } });
+            if (error) {
+              showToast((await readFnError(error)).message);
+              return;
+            }
+            setGens((prev) => (prev ?? []).map((x) => (x.id === g.id ? { ...x, status: 'failed', error: 'cancelled' } : x)));
+            showToast('Cancelled. Credits returned.');
+            void refresh();
+          };
+          return (
+            <div key={g.id} className={`gh-row s-${g.status}`}>
+              <div className={`gh-thumb ${g.aspect === '16:9' ? 'wide' : g.aspect === '1:1' ? 'square' : 'tall'}`}>
+                {g.status === 'ready' && g.result_url && g.kind === 'video' && (
+                  <video src={g.result_url} controls playsInline preload="metadata" />
                 )}
-              </strong>
-              {g.status === 'ready' && g.meta?.description && <span className="gen-meta-desc">{g.meta.description}</span>}
-              {g.status === 'ready' && g.meta?.hashtags && g.meta.hashtags.length > 0 && (
-                <span className="gen-tags">
-                  {g.meta.hashtags.map((t) => (
-                    <i key={t}>#{t}</i>
-                  ))}
-                </span>
-              )}
-              <span>
-                {GEN_MODELS.find((m) => m.id === g.model)?.name ?? g.model} · {g.aspect} ·{' '}
-                {new Date(g.created_at).toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </span>
-              {g.error && <span className="gen-row-error">{g.error}</span>}
+                {g.status === 'ready' && g.result_url && g.kind === 'image' && <img src={g.result_url} alt="" />}
+                {busyRow && <span className={`gh-spin${waiting ? ' paused' : ''}`} aria-hidden="true" />}
+                {g.status === 'failed' && <Ic name="lock" size={14} />}
+              </div>
+              <div className="gh-body">
+                <p className="gh-prompt" title={g.prompt}>{g.prompt}</p>
+                <div className="gh-meta">
+                  <span className={`gh-status ${g.status}${waiting ? ' waiting' : ''}`}>{statusLabel}</span>
+                  <span>{GEN_MODELS.find((m) => m.id === g.model)?.name ?? g.model}</span>
+                  <span>{g.aspect}</span>
+                  <span>
+                    {new Date(g.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                </div>
+                {waiting && (
+                  <p className="gh-note">
+                    The shared GPU quota is used up. Cloudnivo retries automatically
+                    {retryAt ? ` at ${retryAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}.
+                  </p>
+                )}
+                {g.status === 'failed' && g.error && g.error !== 'cancelled' && <p className="gh-note err">{friendlyGenError(g.error)}</p>}
+              </div>
+              <div className="gh-side">
+                <span className="gh-cost">{g.status === 'failed' ? 'Refunded' : `${g.credit_cost ?? 0} cr`}</span>
+                {busyRow && g.job_id && (
+                  <button type="button" className="btn btn-outline sm" onClick={cancel}>Cancel</button>
+                )}
+                {g.status === 'ready' && g.result_url && (
+                  <a className="btn btn-outline sm" href={g.result_url} download target="_blank" rel="noreferrer">Download</a>
+                )}
+              </div>
             </div>
-            <em className="gen-row-credits">
-              {g.status === 'failed' ? 'refunded' : g.credit_cost ? `-${g.credit_cost} cr` : '—'}
-            </em>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1388,6 +1378,13 @@ export default function AppShell() {
 }
 
 /* ---------------- pages ---------------- */
+
+function friendlyGenError(e: string): string {
+  if (/quota/i.test(e)) return 'The shared GPU quota ran out before this could finish. Credits were returned.';
+  if (/timeout|timed out/i.test(e)) return 'The model took too long to respond. Credits were returned.';
+  if (/name resolution|network|connect/i.test(e)) return 'The worker could not reach the model service. Credits were returned.';
+  return 'Something went wrong while rendering. Credits were returned.';
+}
 
 function PageHeader({
   icon,
