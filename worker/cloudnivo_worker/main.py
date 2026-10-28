@@ -18,7 +18,7 @@ log = logging.getLogger("cloudnivo-worker")
 
 WORKER_ID = os.environ.get("WORKER_ID") or socket.gethostname()
 IDLE_SLEEP = float(os.environ.get("IDLE_SLEEP", "5"))
-# Which job kinds this worker takes. The PC worker does both; Modal only clips.
+# Which job kinds this worker takes (default: all of them).
 WORKER_KINDS = [k.strip() for k in os.environ.get("WORKER_KINDS", "clipping,clip_render,generation").split(",") if k.strip()]
 MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "5"))
 PERMANENT = {"video_too_short", "no_audio_track", "no_speech_found", "no video stream", "clip_too_short", "bad_aspect", "clip_not_found"}
@@ -235,7 +235,7 @@ def run_job(db: Supa, job: dict) -> None:
 
 
 def drain(max_seconds: float = 3300) -> int:
-    """Process queued jobs until the queue is empty or time runs out. Used by serverless hosts (Modal)."""
+    """Process queued jobs until the queue is empty or time runs out. Used by serverless or scheduled hosts."""
     db = Supa()
     deadline = time.monotonic() + max_seconds
     done = 0
