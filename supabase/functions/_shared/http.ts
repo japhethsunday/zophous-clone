@@ -15,9 +15,9 @@ function allowedOrigins(): string[] {
 export function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? '';
   const list = allowedOrigins();
-  // Vercel and Cloudflare Pages deployments of this project (production and previews) are allowed too.
+  // This project's Vercel deployments and its Cloudflare Worker (production + preview aliases) are allowed too.
   const ok = list.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)
-    || /^https:\/\/([a-z0-9-]+\.)?cloudnivo[a-z0-9-]*\.(pages\.dev|[a-z0-9-]+\.workers\.dev)$/.test(origin);
+    || /^https:\/\/([a-z0-9-]+-)?cloudnivo\.verdent-react-vite-app\.workers\.dev$/.test(origin);
   return {
     'Access-Control-Allow-Origin': ok ? origin : list[0],
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
