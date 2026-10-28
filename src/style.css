@@ -1543,3 +1543,4 @@ h2 { font-weight: 600 !important; }
   .ph-actions { width: 100%; }
   .ph-txt h1 { font-size: 19px; }
 }
+.audience-icon, .feature-icon { font: 500 12px/1 var(--font-mono) !important; color: var(--faint) !important; background: none !important; }

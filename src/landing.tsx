@@ -112,7 +112,7 @@ export function SplitHero() {
 const STEPS = [
   { n: '01', title: 'Bring a video or an idea', body: 'Upload an MP4, MOV or WebM, or describe the short you want.' },
   { n: '02', title: 'Cloudnivo does the cutting', body: 'Transcripts, best moments, vertical framing, captions, voiceover and scenes.' },
-  { n: '03', title: 'Download and post', body: 'Every result is saved to your library, ready for TikTok, Reels and Shorts.' },
+  { n: '03', title: 'Download', body: 'Every result is saved to your library, sized for TikTok, Reels and Shorts.' },
 ];
 
 export function HowItWorks() {
@@ -156,7 +156,7 @@ export function Bento() {
         <a className="bento-card" href="#/app/gen">
           <span className="bento-tag">Generate</span>
           <strong>Text → video and images</strong>
-          <p>Open models for quick vertical clips and stills, plus premium models when you need them.</p>
+          <p>Free open models for short vertical clips (Wan 2.2) and stills (FLUX).</p>
         </a>
         <div className="bento-card">
           <span className="bento-tag">Captions</span>

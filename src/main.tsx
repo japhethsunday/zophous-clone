@@ -35,10 +35,10 @@ function Nav() {
 /* ---------- who it's for ---------- */
 
 const AUDIENCE = [
-  { icon: '🎙️', t: 'Podcasters', d: 'Turn every episode into a week of shorts that actually get found.' },
-  { icon: '🎮', t: 'Streamers', d: 'Pull the funniest, most-clipped moments from hours of VODs automatically.' },
-  { icon: '🎓', t: 'Coaches & creators', d: 'Repurpose long-form lessons into hooks that grow your audience.' },
-  { icon: '🏢', t: 'Agencies', d: 'Ship 10× the client clips with brand kits and multi-workspace seats.' },
+  { icon: '01', t: 'Podcasters', d: 'Upload an episode and get a set of captioned vertical clips from it.' },
+  { icon: '02', t: 'Streamers', d: 'Cut the strongest moments out of a long VOD without scrubbing through it.' },
+  { icon: '03', t: 'Coaches & creators', d: 'Turn a long lesson into short clips, or a topic into a narrated video.' },
+  { icon: '04', t: 'Small brands', d: 'Make product shots and short videos in your own colours and font.' },
 ];
 
 function WhoFor() {
@@ -70,7 +70,7 @@ const FAQS = [
   },
   {
     q: 'What video formats and lengths work?',
-    a: 'Paste a YouTube link, or upload any MP4 or MOV up to 3 GB: podcasts, streams, webinars, interviews. Clips export in 9:16 ready for TikTok, Reels, and Shorts.',
+    a: 'Upload an MP4, MOV or WebM file: podcasts, streams, webinars, interviews. Clips export in 9:16 ready for TikTok, Reels, and Shorts.',
   },
   {
     q: 'How long does it take?',
@@ -78,7 +78,7 @@ const FAQS = [
   },
   {
     q: 'Do I need editing skills?',
-    a: 'No. Cloudnivo finds the moments, cuts them, adds captions and reframes to vertical. You review the clips and post the ones you like.',
+    a: 'No. Cloudnivo finds the moments, cuts them, adds captions and reframes to vertical. You watch the clips and download the ones you like.',
   },
   {
     q: 'How many minutes do I get?',
@@ -117,7 +117,7 @@ const LIBRARY_TEASER = [
   { cat: 'Marketing', t: 'UGC product ad', d: 'Handheld creator-style ad script for any product.' },
   { cat: 'Story', t: 'Animal story', d: 'Nature-documentary narration over generated footage.' },
   { cat: 'Shorts', t: 'Ranking video', d: 'Countdown list format engineered for rewatching.' },
-  { cat: 'Image', t: 'Product shot', d: 'Studio-lit hero images ready for posts and ads.' },
+  { cat: 'Image', t: 'Product shot', d: 'Clean product images for posts and ads.' },
 ];
 
 function PromptLibraryTeaser() {
@@ -263,15 +263,14 @@ function CommunityPage() {
         Create better content, <span className="serif">together.</span>
       </h2>
       <p className="sub">
-        Our Discord is the heart of Cloudnivo. Thousands of creators share tips, get support, and
-        celebrate wins every day.
+        Our Discord is the heart of Cloudnivo. Creators share tips, ask for help and
+        suggest what we build next.
       </p>
       <div className="features-grid" style={{ marginTop: 44 }}>
         {[
-          ['🛟', 'Direct Support', 'Get help directly from the Cloudnivo team and experienced community members.'],
-          ['🎁', 'Exclusive Giveaways', 'Regular giveaways for free minutes, premium features, and more.'],
-          ['🎓', 'Tutorials & Tips', 'Exclusive tutorials, workflow tips, and content-creation strategies.'],
-          ['🚀', 'Early Access', 'Be the first to try new features and shape the product with feedback.'],
+          ['01', 'Support', 'Ask the Cloudnivo team and other creators when something does not work.'],
+          ['02', 'Tips', 'Short guides on getting better clips and prompts.'],
+          ['03', 'Early access', 'Try new features first and tell us what to fix.'],
         ].map(([ic, t, d]) => (
           <div className="feature-card" key={t}>
             <span className="feature-icon">{ic}</span>
@@ -292,7 +291,7 @@ function LegalPage({ kind }: { kind: 'terms' | 'privacy' | 'dmca' }) {
     ],
     privacy: [
       'Privacy Policy',
-      'We collect the minimum data needed to run your studio: your account email, the videos and clips you create, and performance data from accounts you explicitly connect. We use essential and analytics cookies to run and improve Cloudnivo. We never sell your data, and you can delete your account and data at any time from Settings.',
+      'We collect the minimum data needed to run your studio: your account email and the videos, clips and images you create. We use essential cookies to run and improve Cloudnivo. We never sell your data, and you can delete your account and data at any time from Settings.',
     ],
     dmca: [
       'DMCA Policy',
@@ -314,7 +313,7 @@ function LegalPage({ kind }: { kind: 'terms' | 'privacy' | 'dmca' }) {
 function ToolPage({ name }: { name: string }) {
   const titles: Record<string, string> = {
     'free-ai-clip-maker': 'Free AI clip maker for TikTok, Reels and Shorts',
-    'youtube-clip-maker': 'YouTube clip maker that finds the rewatched moments',
+    'youtube-clip-maker': 'Clip maker for long YouTube videos',
     'podcast-clip-maker': 'Podcast clip maker for every episode',
     'twitch-clip-maker': 'Twitch clip maker for hours of VODs',
   };
@@ -323,15 +322,14 @@ function ToolPage({ name }: { name: string }) {
       <Eyebrow>{name.replace(/-/g, ' ')}</Eyebrow>
       <h2>{titles[name] ?? name}</h2>
       <p className="sub">
-        Paste a link or upload a video. Cloudnivo picks the moments most likely to hold attention,
-        cuts them to 9:16, adds captions and a hook, and scores each clip so you know which to post
-        first.
+        Upload a video. Cloudnivo transcribes it, picks the moments most likely to hold attention,
+        cuts them to 9:16, adds captions and scores each clip so you know which to use first.
       </p>
       <div className="dna-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 44 }}>
         {[
-          ['01', 'Paste or upload', 'A YouTube link, or an MP4/MOV up to 3 GB.'],
-          ['02', 'Pick the window', 'It reads which parts viewers rewatch most. You can drag it.'],
-          ['03', 'Post the winners', 'Vertical clips with captions and hooks, each scored.'],
+          ['01', 'Upload', 'An MP4, MOV or WebM file.'],
+          ['02', 'Find the moments', 'Speech is transcribed and the strongest 20–60 second parts are picked.'],
+          ['03', 'Download', 'Vertical clips with captions, each with a score.'],
         ].map(([n, t, d]) => (
           <div className="dna-card" key={n}>
             <span className="dna-n">{n}</span>
