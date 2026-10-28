@@ -27,6 +27,7 @@ import {
 const ClipsLibrary = lazy(() => import('./clips/ClipsLibrary'));
 const ClipWorkspace = lazy(() => import('./clips/ClipWorkspace'));
 const HomePage = lazy(() => import('./home'));
+const Studio = lazy(() => import('./studio/Studio'));
 
 /* ---------------- helpers ---------------- */
 
@@ -636,12 +637,15 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
-  const PAGES: Page[] = ['home', 'clips', 'gen', 'brand', 'settings'];
+  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'brand', 'settings'];
   const pageFromHash = (): Page => {
     const m = location.hash.match(/^#\/app\/([a-z]+)/);
     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
   };
   const subFromHash = (): string | null => location.hash.match(/^#\/app\/clips\/([\w-]+)/)?.[1] ?? null;
+  const STUDIO_TOOLS = ['chat', 'create', 'restyle', 'edit', 'remove', 'extend', 'describe'];
+  const studioTool = (): 'chat' => { const t = location.hash.match(/^#\/app\/studio\/([a-z]+)/)?.[1]; return (t && STUDIO_TOOLS.includes(t) ? t : 'chat') as 'chat'; };
+  const [tool, setTool] = useState(studioTool);
   const [openVideo, setOpenVideo] = useState<string | null>(subFromHash);
   // Navigation goes through the URL so Back/Forward and deep links work.
   const go = (p: Page, sub?: string) => { location.hash = `#/app/${p}${sub ? `/${sub}` : ''}`; };
@@ -729,7 +733,7 @@ export default function AppShell() {
 
   // Deep links: #/app/<page> opens that page, including when the app is already mounted.
   useEffect(() => {
-    const h = () => { setPage(pageFromHash()); setOpenVideo(subFromHash()); window.scrollTo(0, 0); };
+    const h = () => { setPage(pageFromHash()); setOpenVideo(subFromHash()); setTool(studioTool()); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', h);
     return () => window.removeEventListener('hashchange', h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -780,7 +784,7 @@ export default function AppShell() {
           </button>
         </div>
 
-        <button className="ps-new" onClick={() => { go('gen'); setNavOpen(false); }} title="Create something new">
+        <button className="ps-new" onClick={() => { go('studio'); setNavOpen(false); }} title="Create something new">
           <Ic name="sparkles" size={16} /> <span>New creation</span>
         </button>
 
@@ -792,7 +796,8 @@ export default function AppShell() {
               ]],
               ['Create', [
                 ['clips', 'Clips', 'scissors'],
-                ['gen', 'Generate', 'sparkles'],
+                ['studio', 'Studio', 'sparkles'],
+                ['gen', 'Video & story', 'film'],
               ]],
               ['Brand', [
                 ['brand', 'Brand kit', 'diamond'],
@@ -949,6 +954,12 @@ export default function AppShell() {
             );
           })()}
         </Suspense>
+
+        {page === 'studio' && profile && (
+          <Suspense fallback={<div className="page-pad" aria-busy="true" />}>
+            <Studio tool={tool} onTool={(t) => go('studio', t)} showToast={showToast} />
+          </Suspense>
+        )}
 
         {page === 'gen' && profile && (
           <GenPage profile={profile} showToast={showToast} refresh={refresh} />
