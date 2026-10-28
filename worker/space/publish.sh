@@ -13,7 +13,7 @@ git clone --depth 1 "https://huggingface.co/spaces/${SPACE}" "$TMP/space"
 cd "$TMP/space"
 find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 
-cp "$ROOT/space/Dockerfile" "$ROOT/space/README.md" "$ROOT/requirements.txt" .
+cp "$ROOT/space/Dockerfile" "$ROOT/space/README.md" "$ROOT/requirements.txt" "$ROOT/requirements-extra.txt" .
 cp -r "$ROOT/cloudnivo_worker" .
 find . -name '__pycache__' -prune -exec rm -rf {} +
 

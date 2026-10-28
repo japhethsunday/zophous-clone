@@ -17,7 +17,8 @@ STATE = {"started": time.time(), "jobs_done": 0, "jobs_failed": 0, "last_job_at"
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         body = json.dumps({
-            "ok": True,
+            "ok": STATE.get("ok", True),
+            "missing_secrets": STATE.get("missing_secrets", []),
             "service": "cloudnivo-clipping-worker",
             "uptime_s": int(time.time() - STATE["started"]),
             "busy": STATE["busy"],
@@ -38,3 +39,25 @@ class _Handler(BaseHTTPRequestHandler):
 def serve_in_background(port: int) -> None:
     server = ThreadingHTTPServer(("0.0.0.0", port), _Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
+
+
+def keep_awake(interval_s: int = 6 * 3600) -> None:
+    """Free Hugging Face Spaces sleep after ~48 h without visits. A private Space can't be pinged
+    from outside without a token, so the worker visits its own URL with its HF_TOKEN."""
+    import os
+    import urllib.request
+
+    host, token = os.environ.get("SPACE_HOST"), os.environ.get("HF_TOKEN")
+    if not host or not token:
+        return
+
+    def loop():
+        while True:
+            time.sleep(interval_s)
+            try:
+                req = urllib.request.Request(f"https://{host}/health", headers={"Authorization": f"Bearer {token}"})
+                urllib.request.urlopen(req, timeout=30).read()
+            except Exception:  # noqa: BLE001 - best effort
+                pass
+
+    threading.Thread(target=loop, daemon=True).start()
