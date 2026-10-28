@@ -256,7 +256,7 @@ function ClipCardView({
   onPost: (c: Clip) => void;
   onOpen?: (c: Clip) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  void onPost;
   return (
     <div className="app-clip">
       <div className="app-clip-screen" style={{ aspectRatio: '9/16' }} onClick={() => onOpen?.(clip)}>
@@ -278,23 +278,17 @@ function ClipCardView({
           <span className="clip-src">{clip.caption_style.toUpperCase()}</span>
           <ScoreBadge score={clip.score} />
         </div>
-        {clip.watermarked && <div className="wm">◉ CLOUDNIVO</div>}
+        {clip.watermarked && <div className="wm">CLOUDNIVO</div>}
       </div>
       <div className="app-clip-meta">
         <strong className="app-clip-title">{clip.title}</strong>
         <div className="app-clip-times">
-          {fmtTime(clip.start_seconds)} – {fmtTime(clip.end_seconds)} · ~{predictedViews(clip).toLocaleString()} views
+          {fmtTime(clip.start_seconds)} – {fmtTime(clip.end_seconds)} · {Math.round(clip.end_seconds - clip.start_seconds)}s
         </div>
-        <button className="lnk" onClick={() => setOpen((o) => !o)}>
-          {open ? 'Hide Breakdown ▲' : 'Show Breakdown ▼'}
-        </button>
-        {open && <ClipBreakdown clip={clip} />}
-        {clip.posted_at ? (
-          <div className="posted-tag">✓ Posted to {clip.platform}</div>
-        ) : (
-          <button className="btn btn-purple sm" onClick={() => onPost(clip)}>
-            Post / Schedule
-          </button>
+        {clip.clip_url && (
+          <a className="btn btn-outline sm clip-dl" href={clip.clip_url} download target="_blank" rel="noreferrer">
+            Download
+          </a>
         )}
       </div>
     </div>
@@ -391,10 +385,6 @@ const GEN_MODELS = [
   { id: 'story-free', name: 'Story video · Free', kind: 'video', tag: 'Topic → script, voice, scenes, captions', accent: 'var(--c4)' },
   { id: 'wan-free', name: 'Wan 2.2 · Free', kind: 'video', tag: 'Open model, ~1–3 min, 480p', accent: 'var(--c3)' },
   { id: 'flux-free', name: 'FLUX · Free', kind: 'image', tag: 'Open model, fast stills', accent: 'var(--c2)' },
-  { id: 'seedance-fast', name: 'Seedance Lite', kind: 'video', tag: 'Fast vertical clips', accent: 'var(--c1)' },
-  { id: 'seedance-pro', name: 'Seedance Pro', kind: 'video', tag: 'Richer motion detail', accent: 'var(--c4)' },
-  { id: 'kling-2.1', name: 'Kling 2.1', kind: 'video', tag: 'Cinematic realism', accent: 'var(--c5)' },
-  { id: 'gpt-image', name: 'GPT Image', kind: 'image', tag: 'Poster-grade stills', accent: 'var(--c2)' },
 ] as const;
 
 const GEN_ASPECTS = ['9:16', '16:9', '1:1'] as const;
@@ -648,15 +638,6 @@ function GenPage({
         </div>
       </div>
 
-      <div className="gen-tabs">
-        <button className={`gen-tab${tab === 'create' ? ' on' : ''}`} onClick={() => setTab('create')}>
-          Create
-        </button>
-        <button className={`gen-tab${tab === 'scripts' ? ' on' : ''}`} onClick={() => setTab('scripts')}>
-          Scriptwriter
-        </button>
-      </div>
-
       {tab === 'create' && (
         <>
           <div className="gen-grid">
@@ -771,17 +752,6 @@ function GenPage({
             </div>
           </div>
 
-          <h3 className="gen-sec-h">Viral formats &amp; presets — tap to use</h3>
-          <div className="gen-presets">
-            {prompts.map((p) => (
-              <button key={p.id} className="gen-preset" onClick={() => usePreset(p)} title={p.prompt}>
-                <em>{p.category}</em>
-                <strong>{p.title}</strong>
-                <span>{p.aspect}</span>
-              </button>
-            ))}
-            {prompts.length === 0 && <div className="gen-empty">Loading formats…</div>}
-          </div>
         </>
       )}
 
@@ -941,7 +911,7 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
-  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'posts', 'brand', 'dna', 'analytics', 'settings'];
+  const PAGES: Page[] = ['home', 'clips', 'gen', 'brand', 'settings'];
   const pageFromHash = (): Page => {
     const m = location.hash.match(/^#\/app\/([a-z]+)$/);
     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
@@ -1282,13 +1252,7 @@ export default function AppShell() {
               ]],
               ['Create', [
                 ['clips', 'Clips', 'scissors'],
-                ['studio', 'Studio', 'film'],
                 ['gen', 'Generate', 'sparkles'],
-              ]],
-              ['Publish', [
-                ['posts', 'Posts', 'calendar'],
-                ['analytics', 'Analytics', 'chart'],
-                ['dna', 'DNA Profile', 'activity'],
               ]],
               ['Brand', [
                 ['brand', 'Brand kit', 'diamond'],
@@ -1307,7 +1271,6 @@ export default function AppShell() {
                 >
                   <Ic name={icon} size={17} />
                   <span>{label}</span>
-                  {id === 'home' && doneCount < 4 && <em className="ps-badge">{doneCount}/4</em>}
                 </button>
               ))}
             </div>
@@ -1433,44 +1396,13 @@ export default function AppShell() {
           />
         )}
 
-        {page === 'studio' && profile && (
-          <StudioPage
-            profile={profile}
-            jobs={sfJobs}
-            variations={sfVars}
-            onCreate={createShortformJob}
-          />
-        )}
-
         {page === 'gen' && profile && (
           <GenPage profile={profile} showToast={showToast} refresh={refresh} />
-        )}
-
-        {page === 'posts' && (
-          <div className="page-pad">
-              <PostsList posts={posts} clips={clips} markChecklist={markChecklist} refresh={refresh} />
-          </div>
         )}
 
         {page === 'brand' && profile && (
           <BrandPage profile={profile} isPaid={isPaid} onSaved={setProfile} showToast={showToast} />
         )}
-
-        {page === 'dna' && (
-          <DnaPage dna={dna} profile={profile} onUnlock={unlockDna} onUpgrade={() => setPage('settings')} />
-        )}
-
-        {page === 'analytics' && profile && (
-          <AnalyticsPage
-            profile={profile}
-            posts={posts}
-            isPaid={isPaid}
-            onNav={(p) => setPage(p)}
-            showToast={showToast}
-          />
-        )}
-
-
 
         {page === 'settings' && profile && (
           <SettingsPage
@@ -1553,29 +1485,25 @@ function HomePage({
     ['dna', 'Unlock your DNA Profile', 'See which hooks and topics go viral for you, then create clips with that recipe.', 'Open DNA Profile', 'dna', !checklist.connected],
   ];
   const [cmd, setCmd] = useState('');
-  const [filter, setFilter] = useState<'all' | 'clip' | 'create' | 'publish'>('all');
+  const [filter, setFilter] = useState<'all' | 'clip' | 'create'>('all');
   const firstName = (profile.display_name ?? 'there').split(/[\s@._-]/)[0];
   const isUrl = (v: string) => /^(https?:\/\/|www\.|youtu)/i.test(v.trim());
   const run = (v = cmd) => {
     const t = v.trim();
     if (!t) return;
     if (isUrl(t)) {
-      sessionStorage.setItem('cn_link', t);
       onNav('clips');
-    } else {
-      sessionStorage.setItem('cn_gen_prompt', t);
-      onNav('gen');
+      return;
     }
+    sessionStorage.setItem('cn_gen_prompt', t);
+    onNav('gen');
   };
-  const tools: Array<{ t: string; d: string; p: Page; icon: string; tone: string; group: 'clip' | 'create' | 'publish' }> = [
+  const tools: Array<{ t: string; d: string; p: Page; icon: string; tone: string; group: 'clip' | 'create' }> = [
     { t: 'Clips', d: 'Long video to vertical shorts', p: 'clips', icon: 'scissors', tone: 'violet', group: 'clip' },
-    { t: 'Studio', d: 'Edit talking-head videos', p: 'studio', icon: 'film', tone: 'blue', group: 'clip' },
     { t: 'Story video', d: 'Topic to narrated video', p: 'gen', icon: 'play', tone: 'pink', group: 'create' },
+    { t: 'Video', d: 'Short clip from a prompt', p: 'gen', icon: 'film', tone: 'blue', group: 'create' },
     { t: 'Images', d: 'Stills and thumbnails', p: 'gen', icon: 'sparkles', tone: 'amber', group: 'create' },
-    { t: 'Brand kit', d: 'Colours, fonts, logo', p: 'brand', icon: 'diamond', tone: 'teal', group: 'create' },
-    { t: 'Posts', d: 'Schedule TikTok and YouTube', p: 'posts', icon: 'calendar', tone: 'green', group: 'publish' },
-    { t: 'Analytics', d: 'Views and retention', p: 'analytics', icon: 'chart', tone: 'blue', group: 'publish' },
-    { t: 'DNA Profile', d: 'What works for you', p: 'dna', icon: 'activity', tone: 'violet', group: 'publish' },
+    { t: 'Brand kit', d: 'Logo, colour, font', p: 'brand', icon: 'diamond', tone: 'teal', group: 'create' },
   ];
   const shown = tools.filter((x) => filter === 'all' || x.group === filter);
   return (
@@ -1594,10 +1522,10 @@ function HomePage({
           <input
             value={cmd}
             onChange={(e) => setCmd(e.target.value)}
-            placeholder="Paste a YouTube link, or describe a video to generate"
-            aria-label="Paste a link or describe a video"
+            placeholder="Describe a video or image to generate"
+            aria-label="Describe a video or image"
           />
-          <span className="cmd-kind">{cmd.trim() ? (isUrl(cmd) ? 'Clip link' : 'Generate') : ''}</span>
+          <span className="cmd-kind">{cmd.trim() ? (isUrl(cmd) ? 'Upload instead' : 'Generate') : ''}</span>
           <button className="cmd-go" type="submit" aria-label="Start" disabled={!cmd.trim()}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
           </button>
@@ -1606,14 +1534,13 @@ function HomePage({
           <button onClick={() => onNav('clips')}>Upload a video</button>
           <button onClick={() => run('A 60 second story about how octopuses think')}>Story video</button>
           <button onClick={() => run('Product photo of a matte black water bottle on stone, soft light')}>Product shot</button>
-          <button onClick={() => onNav('studio')}>Edit in Studio</button>
-        </div>
+                  </div>
       </section>
 
       <div className="dash-row">
         <h2 className="dash-h">Tools</h2>
         <div className="seg" role="tablist">
-          {(['all', 'clip', 'create', 'publish'] as const).map((k) => (
+          {(['all', 'clip', 'create'] as const).map((k) => (
             <button key={k} role="tab" aria-selected={filter === k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>
               {k === 'all' ? 'All' : k[0].toUpperCase() + k.slice(1)}
             </button>
@@ -1644,7 +1571,7 @@ function HomePage({
             <div className="empty-state">
               <span className="tool-ic tone-violet"><Ic name="scissors" size={18} /></span>
               <strong>No clips yet</strong>
-              <p>Paste a link above or upload a video. Clips show up here when they are ready.</p>
+              <p>Upload a video in Clips. Your clips show up here when they are ready.</p>
               <button className="btn btn-purple sm" onClick={() => onNav('clips')}>Create clips</button>
             </div>
           ) : (
@@ -1655,25 +1582,6 @@ function HomePage({
             </div>
           )}
         </section>
-        <aside className="setup card">
-          <div className="card-head">
-            <h3>Set up {workspaceName}</h3>
-            <em>{doneCount}/4</em>
-          </div>
-          <div className="setup-bar"><i style={{ width: `${(doneCount / 4) * 100}%` }} /></div>
-          {items.map(([k, t, , cta, target, locked]) => (
-            <button
-              className={`setup-item${checklist[k] ? ' done' : ''}`}
-              key={k}
-              disabled={locked || checklist[k]}
-              onClick={() => onNav(target)}
-              title={locked ? 'Connect TikTok or YouTube first' : cta}
-            >
-              <span className="setup-dot">{checklist[k] ? <Ic name="check" size={12} /> : locked ? <Ic name="lock" size={11} /> : null}</span>
-              <span>{t}</span>
-            </button>
-          ))}
-        </aside>
       </div>
     </div>
   );
@@ -1713,7 +1621,7 @@ function ClipsPage({
   const [title, setTitle] = useState('');
   const [mins, setMins] = useState(45);
   const [openSet, setOpenSet] = useState<string | null>(null);
-  const [howOpen, setHowOpen] = useState(true);
+  const [howOpen, setHowOpen] = useState(false);
 
   if (openSet) {
     const v = videos.find((x) => x.id === openSet);
@@ -1744,12 +1652,11 @@ function ClipsPage({
       {howOpen && (
         <div className="how-card">
           <ol>
-            <li>Paste a link or upload a video.</li>
-            <li>Pick the part to clip and the clip type.</li>
+            <li>Upload an MP4, MOV or WebM video.</li>
+            <li>Cloudnivo transcribes it and picks the strongest moments.</li>
             <li>Your clips appear here in a few minutes.</li>
-            <li>Open a clip to edit it, or press Post.</li>
+            <li>Watch each clip here and download the ones you like.</li>
           </ol>
-          <p className="form-note">Tip: Parts mode splits long videos into ~1:30 chapters.</p>
           <button className="btn btn-ghost sm" onClick={() => setHowOpen(false)}>
             Got it
           </button>
@@ -1758,37 +1665,8 @@ function ClipsPage({
 
       <div className="card create-card">
         <h3>Create a new clip set</h3>
-        <p className="app-sub">Paste a link or upload — AI finds the best moments</p>
-        <div className="tab-row">
-          <button className={`tab${tab === 'link' ? ' on' : ''}`} onClick={() => setTab('link')}>
-            Paste a link
-          </button>
-          <button className={`tab${tab === 'upload' ? ' on' : ''}`} onClick={() => setTab('upload')}>
-            Upload
-          </button>
-          <span className="mins-chip">{minutesLeft} minutes left</span>
-          
-        </div>
-        {tab === 'link' ? (
-          <div className="form-row">
-            <input
-              className="input grow"
-              placeholder="https://youtube.com/watch?v=…"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-            />
-            <button
-              className="btn btn-purple"
-              disabled={!url.trim()}
-              onClick={() => {
-                setWhoseOpen(true);
-                onCreate({ title: url.trim().slice(0, 80), sourceUrl: url.trim(), sourceType: 'link', mode: 'clips', durationMinutes: mins });
-              }}
-            >
-              Generate Clips
-            </button>
-          </div>
-        ) : (
+        <p className="app-sub">Upload an MP4, MOV or WebM. Cloudnivo picks the best moments and adds captions.</p>
+
           <div className="form-row">
             <label className="input grow file-pick">
               <input
@@ -1815,15 +1693,9 @@ function ClipsPage({
                 }
               }}
             >
-              {stage || 'Generate Clips'}
+              {stage || 'Generate clips'}
             </button>
           </div>
-        )}
-        {tab === 'link' && (
-          <p className="form-note">
-            Link import shows a sample preview for now. For real clips, download your own video and use Upload.
-          </p>
-        )}
         <p className="form-note">{minutesLeft} minutes left this month · resets {resetLabel()}</p>
       </div>
 
@@ -1845,7 +1717,7 @@ function ClipsPage({
                 {v.status === 'failed' && v.error && <span className="form-note">{friendlyClipError(v.error)}</span>}
                 {vclips.length > 0 && (
                   <button className="btn btn-outline sm" onClick={() => setOpenSet(v.id)}>
-                    Explore
+                    Open
                   </button>
                 )}
               </div>
@@ -2188,47 +2060,8 @@ function BrandPage({
 
   return (
     <div className="page-pad">
-      <PageHeader icon="diamond" tone="teal" title="Brand kit" sub="Your logo, colours, fonts and media, applied to every edit." />
+      <PageHeader icon="diamond" tone="teal" title="Brand kit" sub="Your logo, colour, font and call to action for generated videos." />
 
-      <h3 className="app-h3">Brand library</h3>
-      <p className="app-sub">
-        Your own pictures and short videos. One Click Edit shows them when what you say matches the
-        note, and adds your intro and outro.
-      </p>
-      <div className="card gate-strip">
-        <span>0 of 50 items</span>
-        <button className="btn btn-outline sm" onClick={() => showToast('Uploads to the brand library are coming soon')}>
-          Add item
-        </button>
-      </div>
-
-      <h3 className="app-h3">Social banner</h3>
-      <p className="app-sub">Your logos and name on every clip. You can change it for any batch when you make clips.</p>
-      <div className="card">
-        <label className="radio">
-          <input type="checkbox" checked={showBanner} onChange={(e) => setShowBanner(e.target.checked)} /> Show on new
-          clips
-        </label>
-        <div className="chip-row wrap">
-          {PLATFORMS.map((p) => (
-            <button
-              key={p}
-              className={`pub-chip pick${platforms.includes(p) ? ' on' : ''}`}
-              onClick={() => setPlatforms((ps) => (ps.includes(p) ? ps.filter((x) => x !== p) : [...ps, p]))}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-        <label className="set-label">Name to show</label>
-        <input className="input" placeholder="Letters, numbers, spaces and . _ - @ & ' ! only." />
-        <button className="btn btn-purple sm" onClick={() => showToast('Banner saved')}>
-          Save banner
-        </button>
-      </div>
-
-      <h3 className="app-h3">Brand Kit</h3>
-      <p className="app-sub">Visual identity for your content</p>
       <div className="card">
         <div className="kit-grid">
           <div>
@@ -2496,14 +2329,12 @@ function SettingsPage({
 
   return (
     <div className="page-pad">
-      <PageHeader icon="sliders" tone="amber" title="Settings" sub="Account, connections and workspace." />
+      <PageHeader icon="sliders" tone="amber" title="Settings" sub="Account and workspace." />
       <div className="tab-row">
         {(
           [
             ['account', 'Account'],
             ['workspace', 'Workspace'],
-            ['connections', 'Connections'],
-            ['reactions', 'Reaction Library'],
           ] as const
         ).map(([id, label]) => (
           <button key={id} className={`tab${tab === id ? ' on' : ''}`} onClick={() => setTab(id)}>
