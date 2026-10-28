@@ -45,7 +45,9 @@ Deno.serve(async (req) => {
       const prompt = String(payload.prompt ?? '').trim().slice(0, 1500);
       if (!prompt) return json(req, { error: 'prompt_required' }, 400);
       const aspect = ASPECTS.has(String(payload.aspect)) ? String(payload.aspect) : '9:16';
-      const durationSeconds = kind === 'video' ? Math.max(2, Math.min(5, Number(payload.durationSeconds) || 3.5)) : null;
+      const durationSeconds = kind !== 'video' ? null
+        : model === 'story-free' ? Math.max(20, Math.min(120, Number(payload.durationSeconds) || 45))
+        : Math.max(2, Math.min(5, Number(payload.durationSeconds) || 3.5));
       const idem = payload.idempotencyKey ? String(payload.idempotencyKey).slice(0, 80) : null;
 
       if (idem) {
@@ -56,11 +58,13 @@ Deno.serve(async (req) => {
         }
       }
 
+      const { data: prof } = await admin.from('profiles').select('plan').eq('id', user.id).single();
       const { data: job, error: jobErr } = await admin
         .from('jobs')
         .insert({
           user_id: user.id, kind: 'generation', status: 'queued', provider: 'hf-zerogpu', ref_table: 'generations',
-          idempotency_key: idem, input: { kind, model, prompt, aspect, durationSeconds },
+          idempotency_key: idem,
+          input: { kind, model, prompt, aspect, durationSeconds, watermark: (prof?.plan ?? 'free') === 'free' },
         })
         .select()
         .single();

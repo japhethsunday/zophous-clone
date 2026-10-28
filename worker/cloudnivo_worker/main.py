@@ -47,9 +47,20 @@ def run_generation_job(db: Supa, job: dict) -> None:
     log.info("generation job %s claimed (%s, attempt %s)", jid, inp.get("model"), job.get("attempts"))
     db.update("generations", f"id=eq.{gid}", {"status": "processing"})
     db.update("jobs", f"id=eq.{jid}", {"progress": 10, "output": {"stage": "generating"}})
+    extra: dict = {}
     try:
         with tempfile.TemporaryDirectory(prefix="cn-gen-") as tmp:
-            if inp.get("kind") == "image":
+            if inp.get("model") == "story-free":
+                from .story import make_story
+
+                def progress(pct: int, stage: str) -> None:
+                    db.update("jobs", f"id=eq.{jid}", {"progress": pct, "output": {"stage": stage}})
+
+                path, thumb, info = make_story(inp, tmp, progress)
+                name, mime = "story.mp4", "video/mp4"
+                db.upload("outputs", f"{uid}/{jid}/story.jpg", thumb, "image/jpeg")
+                extra = {"meta": {"description": info["title"], "scenes": info["scenes"], "seconds": info["seconds"]}}
+            elif inp.get("kind") == "image":
                 path = make_image(inp["prompt"], inp.get("aspect", "9:16"), tmp)
                 name, mime = "image" + os.path.splitext(path)[1], "image/webp" if path.endswith(".webp") else "image/png"
             else:
@@ -80,7 +91,7 @@ def run_generation_job(db: Supa, job: dict) -> None:
 
     db.update("jobs", f"id=eq.{jid}", {"status": "succeeded", "progress": 100, "completed_at": now(),
                                        "output": {"stage": "done", "path": key}})
-    db.update("generations", f"id=eq.{gid}", {"status": "ready", "result_path": key, "completed_at": now()})
+    db.update("generations", f"id=eq.{gid}", {"status": "ready", "result_path": key, "completed_at": now(), **extra})
     db.rpc("credit_settle", {"p_job": jid, "p_actual": job.get("cost_quoted", 0)})
     log.info("generation job %s done", jid)
 

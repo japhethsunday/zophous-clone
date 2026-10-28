@@ -13,6 +13,7 @@ export function creditCost(kind: MediaKind, resolution: string, durationSeconds:
 export const FREE_MODELS: Record<string, { kind: MediaKind; credits: number; name: string }> = {
   'flux-free': { kind: 'image', credits: 1, name: 'FLUX schnell (free)' },
   'wan-free': { kind: 'video', credits: 6, name: 'Wan 2.2 (free)' },
+  'story-free': { kind: 'video', credits: 15, name: 'Story video (free)' },
 };
 
 export function clampVideoSeconds(n: unknown): number {

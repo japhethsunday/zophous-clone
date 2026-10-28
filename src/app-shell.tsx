@@ -422,6 +422,7 @@ function PostModal({
 /* ---------------- gen studio (real AI generation via Edge Functions) ---------------- */
 
 const GEN_MODELS = [
+  { id: 'story-free', name: 'Story video · Free', kind: 'video', tag: 'Topic → script, voice, scenes, captions', accent: 'var(--c4)' },
   { id: 'wan-free', name: 'Wan 2.2 · Free', kind: 'video', tag: 'Open model, ~1–3 min, 480p', accent: 'var(--c3)' },
   { id: 'flux-free', name: 'FLUX · Free', kind: 'image', tag: 'Open model, fast stills', accent: 'var(--c2)' },
   { id: 'seedance-fast', name: 'Seedance Lite', kind: 'video', tag: 'Fast vertical clips', accent: 'var(--c1)' },
@@ -484,6 +485,11 @@ function GenPage({
 
   const model = GEN_MODELS.find((m) => m.id === modelId) ?? GEN_MODELS[0];
   const cost = FREE_MODELS[model.id]?.credits ?? creditCostFor(model.kind, resolution, model.kind === 'video' ? durationSeconds : null);
+  // Each model family has its own length options; snap to a valid one when switching.
+  useEffect(() => {
+    const opts = model.id === 'story-free' ? [30, 60, 90] : model.id === 'wan-free' ? [3, 5] : [5, 10];
+    if (!opts.includes(durationSeconds)) setDuration(opts[model.id === 'story-free' ? 1 : 0]);
+  }, [model.id, durationSeconds]);
   const creditsLeft = profile.credits_balance ?? 0;
   const creditsLimit = profile.credits_limit ?? 0;
 
@@ -741,7 +747,7 @@ function GenPage({
               {model.kind === 'video' && (
                 <div className="gen-opt-row">
                   <span className="gen-opt-label">Length</span>
-                  {[5, 10].map((d) => (
+                  {(model.id === 'story-free' ? [30, 60, 90] : model.id === 'wan-free' ? [3, 5] : [5, 10]).map((d) => (
                     <button
                       key={d}
                       className={`gen-opt sm${durationSeconds === d ? ' on' : ''}`}
