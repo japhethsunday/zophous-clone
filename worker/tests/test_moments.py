@@ -44,3 +44,12 @@ def test_crop_filter_bounds():
     w, h, x, _ = f.split(",")[0].removeprefix("crop=").split(":")
     assert int(x) + int(w) <= 1920 and int(h) == 1080
     assert crop_filter(720, 1280, 0.5).startswith("scale=")  # already vertical: pad, don't crop
+
+
+def test_caption_groups_fit_the_frame():
+    from cloudnivo_worker.media import caption_groups
+
+    words = [Word(i, i + 1, w) for i, w in enumerate("brain! their intelligence is unmatched in the ocean".split())]
+    groups = caption_groups(words)
+    assert all(sum(len(w.text) + 1 for w in g) - 1 <= 16 or len(g) == 1 for g in groups)
+    assert [w.text for g in groups for w in g] == [w.text for w in words]

@@ -100,6 +100,22 @@ def _escape(text: str) -> str:
     return text.replace("\\", "").replace("{", "(").replace("}", ")").replace("\n", " ")
 
 
+def caption_groups(words: list[Word], per_line: int = 3, max_chars: int = 16) -> list[list[Word]]:
+    """Up to `per_line` words per caption, but never more than ~max_chars, so lines fit 9:16."""
+    groups: list[list[Word]] = []
+    cur: list[Word] = []
+    for w in words:
+        text = w.text.strip()
+        width = sum(len(x.text.strip()) + 1 for x in cur) + len(text)
+        if cur and (len(cur) >= per_line or width > max_chars):
+            groups.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        groups.append(cur)
+    return groups
+
+
 def write_ass(
     words: list[Word], clip_start: float, dest: str, per_line: int = 3,
     watermark: bool = False, duration: float = 0.0,
@@ -116,15 +132,14 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,DejaVu Sans,78,&H00FFFFFF,&H00FFFFFF,&H00101010,&H64000000,1,0,0,0,100,100,0,0,1,6,2,2,80,80,520,1
+Style: Cap,DejaVu Sans,72,&H00FFFFFF,&H00FFFFFF,&H00101010,&H64000000,1,0,0,0,100,100,0,0,1,6,2,2,80,80,520,1
 Style: Wm,DejaVu Sans,40,&H60FFFFFF,&H60FFFFFF,&H90000000,&H00000000,1,0,0,0,100,100,2,0,1,2,0,9,40,40,60,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     lines = []
-    for i in range(0, len(words), per_line):
-        group = words[i : i + per_line]
+    for group in caption_groups(words, per_line):
         for k, w in enumerate(group):
             parts = []
             for j, g in enumerate(group):
