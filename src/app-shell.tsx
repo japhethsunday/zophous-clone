@@ -165,6 +165,8 @@ const GEN_MODELS = [
   { id: 'story-free', name: 'Story video', kind: 'video', tag: 'Script, voiceover, scenes and captions', accent: 'var(--c4)' },
   { id: 'wan-free', name: 'Wan 2.2', kind: 'video', tag: 'Short motion clip, 480p', accent: 'var(--c3)' },
   { id: 'flux-free', name: 'FLUX', kind: 'image', tag: 'Still image', accent: 'var(--c2)' },
+  { id: 'flux-schnell-cf', name: 'FLUX Fast', kind: 'image', tag: 'Still image in seconds, no GPU queue', accent: 'var(--c2)' },
+  { id: 'lucid-origin-cf', name: 'Lucid Origin', kind: 'image', tag: 'Detailed still image, sharp text', accent: 'var(--c2)' },
 ] as const;
 
 const GEN_ASPECTS = ['9:16', '16:9', '1:1'] as const;

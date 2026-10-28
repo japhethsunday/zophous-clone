@@ -29,7 +29,17 @@ def _model():
     return _whisper
 
 
-def transcribe(wav: str, offset: float) -> list[Segment]:
+def transcribe(wav: str, offset: float, duration: float | None = None) -> list[Segment]:
+    """Cloudflare Whisper when configured (fast, free tier), else local faster-whisper."""
+    from . import cloudflare_ai
+
+    if cloudflare_ai.enabled() and duration:
+        try:
+            segs_cf = cloudflare_ai.transcribe(wav, duration, offset)
+            log.info("transcribed with Cloudflare Workers AI (%d segments)", len(segs_cf))
+            return segs_cf
+        except Exception as e:  # noqa: BLE001 - quota, network, bad response
+            log.warning("Cloudflare transcription failed, using local Whisper: %s", e)
     segs, _info = _model().transcribe(wav, word_timestamps=True, vad_filter=True, beam_size=1)
     out: list[Segment] = []
     for s in segs:
@@ -66,7 +76,7 @@ def process(
         progress(12, "transcribing")
         wav = str(Path(tmp) / "audio.wav")
         media.extract_audio(src, wav, start, end)
-        segments = transcribe(wav, offset=start)
+        segments = transcribe(wav, offset=start, duration=end - start)
         if not segments:
             raise ValueError("no_speech_found")
 
@@ -165,7 +175,7 @@ def render_edit(
                 progress(25, "transcribing")
                 wav = str(Path(tmp) / "audio.wav")
                 media.extract_audio(src, wav, start, end)
-                words = [w for s in transcribe(wav, offset=start) for w in s.words]
+                words = [w for s in transcribe(wav, offset=start, duration=end - start) for w in s.words]
 
         progress(45, "framing")
         cx = inp.get("crop_x")

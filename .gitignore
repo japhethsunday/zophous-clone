@@ -15,3 +15,6 @@ worker/build.log
 worker/update.log
 
 tests/e2e/fixtures/
+
+# wrangler local state
+.wrangler
