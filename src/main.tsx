@@ -1,50 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppShell from './app-shell';
+import { Bento, HowItWorks, SplitHero } from './landing';
 import './style.css';
 
 /* ---------- shared bits ---------- */
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return <div className="eyebrow">✦ {children}</div>;
-}
-
-function CheckPill() {
-  return (
-    <div className="check-pill">
-      <span className="check-dot">✓</span> Free plan · No credit card · Cancel anytime
-    </div>
-  );
-}
-
-function Stars({ count = 40 }: { count?: number }) {
-  const stars = useRef(
-    Array.from({ length: count }, (_, i) => ({
-      id: i,
-      top: Math.random() * 100,
-      left: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-      opacity: Math.random() * 0.5 + 0.15,
-      delay: Math.random() * 4,
-    })),
-  );
-  return (
-    <div className="starfield" aria-hidden="true">
-      {stars.current.map((s) => (
-        <span
-          key={s.id}
-          style={{
-            top: `${s.top}%`,
-            left: `${s.left}%`,
-            width: s.size,
-            height: s.size,
-            opacity: s.opacity,
-            animationDelay: `${s.delay}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
 }
 
 /* ---------- nav ---------- */
@@ -57,492 +20,16 @@ function Nav() {
           <span className="logo-mark">C</span> Cloudnivo
         </a>
         <div className="nav-links">
-          <a href="#top">Home</a>
-          <a href="#/about">About</a>
+          <a href="#features">Features</a>
+          <a href="#how">How it works</a>
           <a href="#pricing">Pricing</a>
+          <a href="#/about">About</a>
         </div>
         <a className="btn btn-light" href="#/app">
           Get Started →
         </a>
       </nav>
     </header>
-  );
-}
-
-/* ---------- clip card mock ---------- */
-
-function ClipCard({
-  caption,
-  highlight,
-  tint,
-  label,
-}: {
-  caption: string;
-  highlight: string;
-  tint: string;
-  label: string;
-}) {
-  return (
-    <div className="clip-card" style={{ background: tint }}>
-      <div className="clip-top">
-        <span className="clip-src">{label}</span>
-        <span className="clip-score">90</span>
-      </div>
-      <div className="clip-caption">
-        {caption} <em>{highlight}</em>
-      </div>
-      <div className="clip-bars">
-        {Array.from({ length: 24 }).map((_, i) => (
-          <span key={i} style={{ height: 3 + ((i * 7) % 10) }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ---------- hero ---------- */
-
-const HERO_CHIPS = [
-  'Bodycam POV sprinting from a mystery',
-  'Ranking my top 5 conspiracy theories',
-  'Ring cam catches the unthinkable',
-  'UGC ad: skincare routine that went viral',
-  'Untold history storytime, dramatic tone',
-];
-
-function Hero() {
-  const [link, setLink] = useState('');
-  const [idea, setIdea] = useState('');
-
-  const goClip = () => {
-    if (link.trim()) sessionStorage.setItem('cn_link', link.trim());
-    location.hash = '#/app';
-  };
-  const goGen = () => {
-    if (idea.trim()) sessionStorage.setItem('cn_gen_prompt', idea.trim());
-    location.hash = '#/app/gen';
-  };
-
-  return (
-    <section className="hero" id="top">
-      <Eyebrow>AI-Powered Video Clipping</Eyebrow>
-      <h1>
-        Your long videos, turned into <span className="serif">daily shorts</span>.
-      </h1>
-      <p className="sub">
-        Paste a link and get captioned, scored clips — or describe what you want and our AI
-        generates it. Both live in one studio.
-      </p>
-      <div className="hero-inputs">
-        <div className="hero-input-row">
-          <input
-            className="hero-input"
-            placeholder="Paste a YouTube, podcast or stream link…"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && goClip()}
-          />
-          <button className="btn btn-purple" onClick={goClip}>
-            Get free clips
-          </button>
-        </div>
-        <div className="hero-input-row alt">
-          <input
-            className="hero-input"
-            placeholder="Or describe what AI should make — a bodycam POV, a UGC ad…"
-            value={idea}
-            onChange={(e) => setIdea(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && goGen()}
-          />
-          <button className="btn btn-outline" onClick={goGen}>
-            Generate it →
-          </button>
-        </div>
-        <div className="hero-chips">
-          {HERO_CHIPS.map((c) => (
-            <button
-              key={c}
-              className="hero-chip"
-              onClick={() => {
-                setIdea(c);
-                setLink('');
-              }}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
-      <p className="hero-stats">
-        Clips, AI video and scripts in <strong>one workspace</strong>
-      </p>
-      <CheckPill />
-      <div className="clip-row">
-        <ClipCard
-          label="TikTok"
-          caption="SCREAMED 'I COULDN'T EVEN FACE'"
-          highlight="MY TEAM"
-          tint="var(--surface-3)"
-        />
-        <ClipCard
-          label="Reels"
-          caption="I AM CAN'T WIN IT IF WE CAN'T EVEN RUN"
-          highlight="SEC OFFENSE"
-          tint="var(--surface-3)"
-        />
-        <ClipCard
-          label="Shorts"
-          caption="THEY TOLD ME I TALK TOO MUCH, SO I MAKE SURE TO MAKE EVERY WORD COUNT."
-          highlight="EVERY WORD"
-          tint="var(--surface-3)"
-        />
-        <ClipCard
-          label="Reels"
-          caption="WE'RE NOT DONE YET — WATCH WHAT HAPPENS NEXT"
-          highlight="BE NEXT"
-          tint="var(--surface-3)"
-        />
-      </div>
-    </section>
-  );
-}
-
-/* ---------- smart cropping ---------- */
-
-function SmartCropping() {
-  return (
-    <section className="section">
-      <Eyebrow>Smart Cropping</Eyebrow>
-      <h2>
-        Cropping that <span className="serif">follows the speaker</span>
-      </h2>
-      <p className="sub">
-        No dead-center crops that cut off whoever's talking. The box tracks the active speaker, and
-        that's exactly what lands in your vertical clip.
-      </p>
-      <div className="crop-visual">
-        <div className="crop-before">
-          <div className="crop-chip">BEFORE · SOURCE + CROP BOX</div>
-          <div className="crop-frame">
-            <div className="crop-speakers">
-              <div className="speaker" />
-              <div className="speaker active">
-                <div className="crop-box">
-                  <span />
-                </div>
-              </div>
-              <div className="speaker" />
-              <div className="speaker" />
-            </div>
-            <div className="crop-lower">TEXAS TECH SEASON PREVIEW</div>
-          </div>
-        </div>
-        <div className="crop-arrow">→</div>
-        <div className="crop-after">
-          <div className="crop-chip green">AFTER</div>
-          <div className="crop-vertical">
-            <div className="cv-caption">
-              POTENTIALLY (LEGALLY) A STARTER NOW, ACTUALLY
-            </div>
-            <div className="cv-body" />
-            <div className="cv-lower">TEXAS TECH SEC</div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- one upload ---------- */
-
-function OneUpload() {
-  return (
-    <section className="section" id="how">
-      <Eyebrow>One Upload</Eyebrow>
-      <h2>
-        One long video, <span className="serif">a whole library</span>
-      </h2>
-      <p className="sub">
-        Paste a link to a podcast, stream, or webinar, and Cloudnivo returns a batch of captioned,
-        scored, ready-to-post clips.
-      </p>
-      <div className="library-visual">
-        <div className="library-source">
-          <div className="ls-bar">
-            <span className="ls-dot" /> ↑ 1 long upload <span className="ls-badge">● Analyzing</span>
-          </div>
-          <div className="ls-body">
-            <div className="ls-face" />
-            <div className="ls-figures">
-              <span /><span /><span /><span />
-            </div>
-          </div>
-        </div>
-        <div className="library-lines" aria-hidden="true">
-          <svg viewBox="0 0 400 60" preserveAspectRatio="none">
-            <path d="M200 0 C 120 30, 60 30, 40 60" />
-            <path d="M200 0 C 200 25, 200 35, 200 60" />
-            <path d="M200 0 C 280 30, 340 30, 360 60" />
-          </svg>
-        </div>
-        <div className="library-clips">
-          <div className="mini-clip a">PLAYERS WHO DID 3 PICK 6 GAMES IN A ROW</div>
-          <div className="mini-clip b">ARE YOU KIDDING ME? THIS IS INSANE</div>
-          <div className="mini-clip c">THEY TOLD ME I TALK TOO MUCH</div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- viral dna steps ---------- */
-
-const DNA_STEPS = [
-  { n: '01', t: 'Paste a link', d: 'Any long video: a YouTube link, podcast, stream or webinar.' },
-  { n: '02', t: 'AI clips what performs', d: "It cuts the moments your audience is most likely to watch." },
-  { n: '03', t: 'You post', d: 'Captioned, vertical, ready for TikTok, Reels & Shorts.' },
-  { n: '04', t: 'Cloudnivo learns', d: "Every clip's performance feeds your viral DNA profile." },
-  { n: '05', t: 'Sharper next time', d: 'The next batch is tuned to what actually worked for you.' },
-];
-
-function ViralDna() {
-  return (
-    <section className="section">
-      <Eyebrow>Your Viral DNA</Eyebrow>
-      <h2>
-        Every clip builds your <span className="serif">viral DNA</span>
-      </h2>
-      <p className="sub">
-        Most tools just cut clips. Cloudnivo learns from every post, building a profile of what your
-        audience rewards, so each upload is sharper than the last.
-      </p>
-      <div className="dna-grid">
-        {DNA_STEPS.map((s) => (
-          <div className="dna-card" key={s.n}>
-            <span className="dna-n">{s.n}</span>
-            <h3>{s.t}</h3>
-            <p>{s.d}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- studio ---------- */
-
-function Studio() {
-  return (
-    <section className="section studio">
-      <div className="studio-copy">
-        <div className="eyebrow left">✦ Inside the Studio</div>
-        <h2>
-          It learns your <span className="serif">viral DNA</span>.
-        </h2>
-        <p className="sub left">
-          Every clip you post feeds a profile of what actually works for your audience. Measured,
-          not guessed. So the next batch isn't random; it's tuned to you.
-        </p>
-        <ul className="studio-list">
-          <li>
-            <strong>● Hook effectiveness</strong>
-            Which openers actually earn the view, measured by hook type.
-          </li>
-          <li>
-            <strong>● Category performance</strong>
-            What topics and formats your audience rewards, ranked.
-          </li>
-          <li>
-            <strong>● Visual-element impact</strong>
-            Facecam, captions, b-roll: what lifts your viral rate.
-          </li>
-        </ul>
-      </div>
-      <div className="studio-panel">
-        <div className="sp-bar">
-          <span className="ls-dot" /> DNA Profile · Performance <span className="sp-live">+ Live</span>
-        </div>
-        <div className="sp-title">DNA PROFILE</div>
-        {[
-          { label: 'Shock-statement hooks', w: 86 },
-          { label: 'Trivia reveals', w: 72 },
-          { label: 'Storytime openers', w: 64 },
-          { label: 'Question hooks', w: 51 },
-        ].map((r) => (
-          <div className="sp-row" key={r.label}>
-            <span>{r.label}</span>
-            <div className="sp-track">
-              <div className="sp-fill" style={{ width: `${r.w}%` }} />
-            </div>
-            <em>{r.w}</em>
-          </div>
-        ))}
-        <div className="sp-title">CATEGORY PERFORMANCE</div>
-        {[
-          { label: 'Untold history', w: 78 },
-          { label: 'Sports moments', w: 66 },
-          { label: 'Creator drama', w: 44 },
-        ].map((r) => (
-          <div className="sp-row" key={r.label}>
-            <span>{r.label}</span>
-            <div className="sp-track">
-              <div className="sp-fill alt" style={{ width: `${r.w}%` }} />
-            </div>
-            <em>{r.w}</em>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- coach ---------- */
-
-function Coach() {
-  return (
-    <section className="section">
-      <div className="eyebrow">✦ Built-in Coach</div>
-      <h2>Know why it worked.</h2>
-      <p className="sub">
-        Every clip comes back with a read on its hook, tone, and exactly why it performed, plus
-        statistically driven ideas for what to make next. It's a growth coach, not just a cutter.
-      </p>
-      <div className="coach-card">
-        <div className="coach-row">
-          <span className="coach-k">Hook</span>
-          <span className="coach-v">shocking statement</span>
-        </div>
-        <div className="coach-row">
-          <span className="coach-k">Tone</span>
-          <span className="coach-v">somber, informative</span>
-        </div>
-        <div className="coach-row">
-          <span className="coach-k">Why it performed</span>
-          <span className="coach-v">leverages untold trivia → curiosity</span>
-        </div>
-        <div className="coach-ideas">
-          <div className="coach-k">Next clip ideas</div>
-          <ol>
-            <li>Add B-roll of the subjects for visual context.</li>
-            <li>Use dynamic zooms on the reveal for emphasis.</li>
-          </ol>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- stats ---------- */
-
-function Stats() {
-  const stats = [
-    { v: '9:16', l: 'Vertical-ready' },
-    { v: '50+', l: 'Caption languages' },
-    { v: 'AI', l: 'Video & image models' },
-    { v: '1', l: 'Credit balance for all' },
-  ];
-  return (
-    <section className="stats-row">
-      {stats.map((s) => (
-        <div className="stat" key={s.l}>
-          <div className="stat-v">{s.v}</div>
-          <div className="stat-l">{s.l}</div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-/* ---------- publish & track ---------- */
-
-function PublishTrack() {
-  return (
-    <section className="section">
-      <Eyebrow>Publish &amp; Track</Eyebrow>
-      <h2>
-        Post everywhere. <span className="serif">Track everything.</span>
-      </h2>
-      <p className="sub">
-        Publish straight to TikTok and YouTube without leaving the studio, then watch views and
-        engagement roll back in. That data is what sharpens your next clips. The loop closes here.
-      </p>
-      <div className="publish-visual">
-        <div className="pub-chips">
-          <span className="pub-chip">TikTok</span>
-          <span className="pub-chip">YouTube</span>
-          <span className="pub-chip">Reels</span>
-        </div>
-        <div className="pub-toast">✓ Posted to TikTok</div>
-        <div className="pub-graph">
-          {Array.from({ length: 14 }).map((_, i) => (
-            <span key={i} style={{ height: 12 + ((i * i * 3) % 80) }} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- features ---------- */
-
-const FEATURES = [
-  { icon: '✂️', t: 'AI clipping', d: 'Finds the highest-potential moments and cuts them for you.' },
-  { icon: '💬', t: 'Animated captions', d: 'Word-by-word captions styled for TikTok, Reels & Shorts.' },
-  { icon: '🎯', t: 'Speaker tracking', d: 'Smart 9:16 cropping that follows the active speaker.' },
-  { icon: '🧬', t: 'Viral DNA profile', d: 'Learns what your audience rewards with every post.' },
-  { icon: '📈', t: 'Virality scoring', d: 'Every clip comes back scored before you post it.' },
-  { icon: '🗓️', t: 'Scheduling', d: 'Plan and auto-post to TikTok and YouTube from the studio.' },
-  { icon: '⚡', t: 'Turbo downloads', d: 'Clips ready in about 10 seconds on paid plans.' },
-  { icon: '🎨', t: 'Brand kits', d: 'Fonts, colors and watermarks applied across workspaces.' },
-];
-
-function Features() {
-  return (
-    <section className="section" id="features">
-      <Eyebrow>Features</Eyebrow>
-      <h2>
-        Everything you need <span className="serif">to go viral</span>
-      </h2>
-      <div className="features-grid">
-        {FEATURES.map((f) => (
-          <div className="feature-card" key={f.t}>
-            <span className="feature-icon">{f.icon}</span>
-            <h3>{f.t}</h3>
-            <p>{f.d}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- why cloudnivo ---------- */
-
-function WhyCloudnivo() {
-  return (
-    <section className="section" id="why">
-      <Eyebrow>Why Cloudnivo</Eyebrow>
-      <h2>
-        One studio for <span className="serif">every short you make</span>.
-      </h2>
-      <p className="sub">
-        Repurpose long videos, generate new ones from a prompt, and keep every clip, script and render in one workspace, instead of juggling five tools and five subscriptions.
-      </p>
-      <div className="compare">
-        <div className="compare-col them">
-          <div className="compare-head">Five separate tools</div>
-          <div className="compare-row">A clipper, a generator, a script tool…</div>
-          <div className="compare-row">Files scattered across apps</div>
-          <div className="compare-row">A credit balance in every one</div>
-        </div>
-        <div className="compare-col us">
-          <div className="compare-head">Cloudnivo</div>
-          <div className="compare-row">Clip, generate and script in one place</div>
-          <div className="compare-row">Every asset saved to your library</div>
-          <div className="compare-row">One balance, charged only on success</div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -618,26 +105,6 @@ function Faq() {
             {open === i && <div className="faq-a">{f.a}</div>}
           </div>
         ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- testimonial ---------- */
-
-function Testimonial() {
-  return (
-    <section className="section">
-      <div className="testimonial">
-        <p className="quote">
-          "Before it was a product, this was how Daniel grew his own show,{' '}
-          <span className="serif">Dmac Pods</span>, one clip at a time."
-        </p>
-        <div className="quote-stats">
-          <span>🎬 5.3K Followers in 3 Months</span>
-          <span>📈 1.3M Likes</span>
-          <span>🎙️ Podcaster · Dmac Pods</span>
-        </div>
       </div>
     </section>
   );
@@ -795,16 +262,13 @@ function Cta() {
         </div>
       </div>
       <h2>
-        Start making <span className="serif">viral clips</span> today
+        Make your next short <span className="serif">today</span>
       </h2>
-      <p className="sub">
-        Join thousands of creators turning long videos into short-form gold. Start for free, no
-        credit card required.
-      </p>
+      <p className="sub">Upload a video or start from an idea. The free plan needs no credit card.</p>
       <a className="btn btn-purple big" href="#/app">
         Start for free
       </a>
-      <CheckPill />
+      <p className="hero2-note">Free plan · No credit card · Cancel anytime</p>
     </section>
   );
 }
@@ -817,7 +281,6 @@ function PageShell({ children }: { children: React.ReactNode }) {
   }, []);
   return (
     <div className="page">
-      <Stars />
       <Nav />
       <main>
         <section className="section in-view" style={{ paddingTop: 80 }}>
@@ -1019,24 +482,15 @@ function useRoute() {
 function Landing() {
   return (
     <div className="page">
-      <Stars />
       <Nav />
       <main>
-        <Hero />
-        <SmartCropping />
-        <OneUpload />
-        <ViralDna />
-        <Studio />
-        <Coach />
-        <Stats />
-        <PublishTrack />
-        <Features />
+        <SplitHero />
+        <HowItWorks />
+        <Bento />
         <PromptLibraryTeaser />
-        <WhyCloudnivo />
         <WhoFor />
-        <Faq />
-        <Testimonial />
         <Pricing />
+        <Faq />
         <Cta />
       </main>
       <Footer />

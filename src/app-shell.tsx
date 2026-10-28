@@ -29,6 +29,12 @@ import { uploadSource } from './lib/uploads';
 
 /* Inline SVG icon set — 16px, 1.5px stroke, currentColor (no dependency) */
 const IC_PATHS: Record<string, React.ReactNode> = {
+  home: (
+    <>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20h5v-6h4v6h5V9.5" />
+    </>
+  ),
   scissors: (
     <>
       <circle cx="6" cy="6" r="2.6" />
@@ -953,6 +959,7 @@ export default function AppShell() {
   };
   const [session, setSession] = useState<boolean | null>(null);
   const [page, setPage] = useState<Page>(pageFromHash);
+  const [menu, setMenu] = useState<null | 'more' | 'account'>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [clips, setClips] = useState<Clip[]>([]);
@@ -1247,116 +1254,109 @@ export default function AppShell() {
   if (!session) return <SigninGate />;
 
   return (
-    <div className={`shell v2${page === 'gen' ? ' gen-mode' : ''}`}>
-      <aside className="sidebar">
-        <div className="logo side-logo">
-          <span className="logo-mark zlogo">C</span> Cloudnivo
-        </div>
-        <button className="ws-link" onClick={() => setPage('home')}>
-          ‹ All Workspaces
-        </button>
-        <nav>
-          <div className="nav-group">Create</div>
+    <div className={`shell topnav${page === 'gen' ? ' gen-mode' : ''}`} onClick={(e) => { if (menu && !(e.target as HTMLElement).closest('.top-menu')) setMenu(null); }}>
+      <header className="topbar">
+        <a className="logo top-logo" href="#/app/home" onClick={(e) => { e.preventDefault(); setPage('home'); }}>
+          <span className="logo-mark">C</span> <span className="top-logo-text">Cloudnivo</span>
+        </a>
+        <nav className="top-tabs" aria-label="Main">
           {(
             [
+              ['home', 'Home', 'home'],
               ['clips', 'Clips', 'scissors'],
               ['studio', 'Studio', 'film'],
-              ['gen', 'Gen Studio', 'sparkles'],
+              ['gen', 'Generate', 'sparkles'],
               ['posts', 'Posts', 'calendar'],
             ] as const
           ).map(([id, label, icon]) => (
-            <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
-              <span className="side-ic"><Ic name={icon} /></span> {label}
+            <button
+              key={id}
+              className={`top-tab${page === id ? ' on' : ''}`}
+              aria-current={page === id ? 'page' : undefined}
+              onClick={() => { setPage(id); setMenu(null); }}
+            >
+              <Ic name={icon} size={15} /> {label}
             </button>
           ))}
-          <div className="nav-group">Grow</div>
-          {(
-            [
-              ['brand', 'Brand', 'diamond'],
-              ['dna', 'DNA Profile', 'activity'],
-              ['analytics', 'Analytics', 'chart'],
-            ] as const
-          ).map(([id, label, icon]) => (
-            <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
-              <span className="side-ic"><Ic name={icon} /></span> {label}
+          <div className="top-menu">
+            <button
+              className={`top-tab${['brand', 'dna', 'analytics'].includes(page) ? ' on' : ''}`}
+              aria-expanded={menu === 'more'}
+              onClick={() => setMenu(menu === 'more' ? null : 'more')}
+            >
+              More ▾
             </button>
-          ))}
-          <div className="nav-group">Account</div>
-          {(
-            [
-              ['billing', 'Billing', 'card'],
-              ['settings', 'Settings', 'sliders'],
-            ] as const
-          ).map(([id, label, icon]) => (
-            <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
-              <span className="side-ic"><Ic name={icon} /></span> {label}
-            </button>
-          ))}
+            {menu === 'more' && (
+              <div className="top-pop" role="menu">
+                {(
+                  [
+                    ['brand', 'Brand kit', 'diamond'],
+                    ['dna', 'DNA Profile', 'activity'],
+                    ['analytics', 'Analytics', 'chart'],
+                  ] as const
+                ).map(([id, label, icon]) => (
+                  <button key={id} role="menuitem" onClick={() => { setPage(id); setMenu(null); }}>
+                    <Ic name={icon} size={15} /> {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
-        <button className="gs-pill" onClick={() => setPage('home')}>
-          Getting started · {doneCount}/4
-        </button>
-
-        {profile && (
-          <div className="plan-card">
-            <div className="plan-name">{PLANS[profile.plan].name}</div>
-            <div className="plan-meter">
-              <div className="plan-meter-label">
-                <span>Clipping minutes</span>
-                <strong>{minutesLeft} of {profile.minutes_limit} min</strong>
-              </div>
-              <div className="sp-track">
-                <div
-                  className="sp-fill"
-                  style={{
-                    width: `${profile.minutes_limit ? Math.min(100, Math.round((minutesLeft / profile.minutes_limit) * 100)) : 0}%`,
-                  }}
-                />
-              </div>
-            </div>
-            <div className="plan-meter">
-              <div className="plan-meter-label">
-                <span>AI credits</span>
-                <strong>{profile.credits_balance} of {PLANS[profile.plan].credits}</strong>
-              </div>
-              <div className="sp-track">
-                <div
-                  className="sp-fill alt"
-                  style={{
-                    width: `${PLANS[profile.plan].credits ? Math.min(100, Math.round((profile.credits_balance / PLANS[profile.plan].credits) * 100)) : 0}%`,
-                  }}
-                />
-              </div>
-            </div>
-            <em className="plan-resets">Resets {resetLabel()}</em>
-            <p>
-              {profile.plan === 'free'
-                ? '1 watermark-free clip a month.'
-                : 'Watermark-free clips with analytics.'}
-            </p>
-            <button className="btn btn-purple sm wide" onClick={() => setPage('billing')}>
-              <Ic name="zap" size={14} /> Upgrade Plan
+        <div className="top-right">
+          {profile && (
+            <button className="top-meter" onClick={() => setPage('billing')} title="Your monthly allowance">
+              <span><b>{minutesLeft}</b> min</span>
+              <span><b>{profile.credits_balance}</b> credits</span>
             </button>
+          )}
+          {profile?.plan === 'free' && (
+            <button className="btn btn-purple sm" onClick={() => setPage('billing')}>
+              Upgrade
+            </button>
+          )}
+          <div className="top-menu">
+            <button
+              className="top-avatar"
+              aria-label="Account menu"
+              aria-expanded={menu === 'account'}
+              onClick={() => setMenu(menu === 'account' ? null : 'account')}
+            >
+              {(profile?.display_name ?? 'C').slice(0, 1).toUpperCase()}
+            </button>
+            {menu === 'account' && (
+              <div className="top-pop right" role="menu">
+                {profile && (
+                  <div className="top-pop-head">
+                    <strong>{PLANS[profile.plan].name}</strong>
+                    <span>Resets {resetLabel()}</span>
+                  </div>
+                )}
+                <button role="menuitem" onClick={() => { setPage('home'); setMenu(null); }}>
+                  Getting started · {doneCount}/4
+                </button>
+                <button role="menuitem" onClick={() => { setPage('billing'); setMenu(null); }}>
+                  <Ic name="card" size={15} /> Billing
+                </button>
+                <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); }}>
+                  <Ic name="sliders" size={15} /> Settings
+                </button>
+                <a role="menuitem" href="#/">← Back to site</a>
+                <button
+                  role="menuitem"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    setSession(false);
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
-        )}
-
-        <div className="side-foot">
-          <a className="side-link" href="#/">
-            ← Back to site
-          </a>
-          <button
-            className="side-link"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              setSession(false);
-            }}
-          >
-            Sign out
-          </button>
-          <div className="side-legal">Terms · Privacy · DMCA</div>
         </div>
-      </aside>
+      </header>
 
       <main className="app-main">
         {toast && <div className="toast">{toast}</div>}
