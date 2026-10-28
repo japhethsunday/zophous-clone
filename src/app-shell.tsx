@@ -615,15 +615,9 @@ function GenPage({
 
   return (
     <div className="gen-page">
-      <div className="page-head-row">
-        <div>
-          <h2 className="app-h gen-h">Generate</h2>
-          <p className="gen-sub">Video, images and narrated stories from a prompt.</p>
-        </div>
-        <span className="gen-credits-pill">
-          {creditsLeft} credits
-        </span>
-      </div>
+      <PageHeader icon="sparkles" tone="pink" title="Generate" sub="Video, images and narrated stories from a prompt.">
+        <span className="gen-credits-pill">{creditsLeft} credits</span>
+      </PageHeader>
 
       <div className="gen-stats">
         <div className="gen-stat">
@@ -1510,6 +1504,31 @@ export default function AppShell() {
 
 /* ---------------- pages ---------------- */
 
+function PageHeader({
+  icon,
+  tone,
+  title,
+  sub,
+  children,
+}: {
+  icon: string;
+  tone: string;
+  title: React.ReactNode;
+  sub?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <header className="ph">
+      <span className={`tool-ic tone-${tone}`}><Ic name={icon} size={18} /></span>
+      <div className="ph-txt">
+        <h1>{title}</h1>
+        {sub && <p>{sub}</p>}
+      </div>
+      {children && <div className="ph-actions">{children}</div>}
+    </header>
+  );
+}
+
 function HomePage({
   profile,
   clips,
@@ -1717,11 +1736,11 @@ function ClipsPage({
 
   return (
     <div className="page-pad">
-      <h2 className="app-h">Clips</h2>
-      <p className="app-sub">Fast clips from a link or upload</p>
-      <button className="lnk" onClick={() => setHowOpen((o) => !o)}>
-        ? How Clips works
-      </button>
+      <PageHeader icon="scissors" tone="violet" title="Clips" sub="Turn a long video into vertical shorts with captions.">
+        <button className="btn btn-outline sm" onClick={() => setHowOpen((o) => !o)}>
+          {howOpen ? 'Hide guide' : 'How it works'}
+        </button>
+      </PageHeader>
       {howOpen && (
         <div className="how-card">
           <ol>
@@ -1885,16 +1904,10 @@ function StudioPage({
 
   return (
     <div className="page-pad">
-      <div className="page-head-row">
-        <div>
-          <h2 className="app-h">Cloudnivo Studio</h2>
-          <p className="app-sub">Edit your talking-head videos. Drop them in, pick a look, get finished shorts.</p>
-        </div>
-        <span className="studio-chip">✦ {profile.studio_clips_limit - profile.studio_clips_used} Studio clips</span>
-      </div>
-      <button className="lnk" onClick={() => setHowOpen((o) => !o)}>
-        ? How this works
-      </button>
+      <PageHeader icon="film" tone="blue" title="Studio" sub="Drop in a talking-head video, pick a look, get finished shorts.">
+        <span className="gen-credits-pill">{profile.studio_clips_limit - profile.studio_clips_used} Studio clips</span>
+        <button className="btn btn-outline sm" onClick={() => setHowOpen((o) => !o)}>{howOpen ? 'Hide guide' : 'How it works'}</button>
+      </PageHeader>
       {howOpen && (
         <div className="how-card">
           <ol>
@@ -1998,7 +2011,7 @@ function StudioPage({
         </p>
       </div>
 
-      <div className="nav-group">YOUR STUDIO JOBS</div>
+      <div className="nav-group">Your Studio jobs</div>
       {jobs.length === 0 && (
         <p className="app-sub">Your edited videos show up here. Drop a video above to start.</p>
       )}
@@ -2027,7 +2040,7 @@ function StudioPage({
                       <div className="clip-views">
                         {v.duration_ms ? fmtTime(Math.round(v.duration_ms / 1000)) : '—'}
                       </div>
-                      {v.auto_edited_at && <div className="wm">✦ auto-edited</div>}
+                      {v.auto_edited_at && <div className="wm">auto-edited</div>}
                     </div>
                     <div className="app-clip-meta">
                       <div className="app-clip-times">{v.topic_title}</div>
@@ -2057,9 +2070,14 @@ function PostsList({
 }) {
   return (
     <>
-      <h2 className="app-h">Posts</h2>
-      <p className="app-sub">Everything you have posted or scheduled, newest first.</p>
-      {posts.length === 0 && <p className="app-sub">No posts yet.</p>}
+      <PageHeader icon="calendar" tone="green" title="Posts" sub="Everything you have posted or scheduled, newest first." />
+      {posts.length === 0 && (
+        <div className="empty-state">
+          <span className="tool-ic tone-green"><Ic name="calendar" size={18} /></span>
+          <strong>Nothing scheduled</strong>
+          <p>Open a clip and choose Post to publish it now or schedule it for later.</p>
+        </div>
+      )}
       <div className="post-list">
         {posts.map((p) => {
           const clip = clips.find((c) => c.id === p.clip_id);
@@ -2170,8 +2188,7 @@ function BrandPage({
 
   return (
     <div className="page-pad">
-      <h2 className="app-h">Brand</h2>
-      <p className="app-sub">Your pictures, videos, logo and colors, ready for every edit.</p>
+      <PageHeader icon="diamond" tone="teal" title="Brand kit" sub="Your logo, colours, fonts and media, applied to every edit." />
 
       <h3 className="app-h3">Brand library</h3>
       <p className="app-sub">
@@ -2263,8 +2280,7 @@ function DnaPage({
 
   return (
     <div className="page-pad">
-      <h2 className="app-h">DNA Profile</h2>
-      <p className="app-sub">Your content intelligence hub — {dna.length ? 'unlocked' : '0 clips analyzed'}</p>
+      <PageHeader icon="activity" tone="violet" title="DNA Profile" sub={dna.length ? 'What works for your audience, from your posted clips.' : 'No clips analysed yet.'} />
 
       <div className="card how-card">
         <strong>How DNA Profile works</strong>
@@ -2405,6 +2421,7 @@ function AnalyticsPage({
 
   return (
     <div className="page-pad">
+      <PageHeader icon="chart" tone="blue" title="Analytics" sub="Views, retention and what to post next." />
       <div className="tab-row">
         <button className={`tab${network === 'tiktok' ? ' on' : ''}`} onClick={() => setNetwork('tiktok')}>
           TikTok
@@ -2413,7 +2430,7 @@ function AnalyticsPage({
           YouTube
         </button>
       </div>
-      <h2 className="app-h">{network === 'tiktok' ? 'TikTok' : 'YouTube'} Analytics</h2>
+      <h3 className="app-h3">{network === 'tiktok' ? 'TikTok' : 'YouTube'}</h3>
       <p className="app-sub">Performance insights from your {network === 'tiktok' ? 'TikTok' : 'YouTube'} account</p>
 
       {!connected ? (
@@ -2479,8 +2496,7 @@ function SettingsPage({
 
   return (
     <div className="page-pad">
-      <h2 className="app-h">Settings</h2>
-      <p className="app-sub">Manage your workspace</p>
+      <PageHeader icon="sliders" tone="amber" title="Settings" sub="Account, connections and workspace." />
       <div className="tab-row">
         {(
           [
@@ -2497,7 +2513,7 @@ function SettingsPage({
       </div>
 
       {tab === 'account' && (
-        <div className="nav-group">ACCOUNT</div>
+        <div className="nav-group">Account</div>
       )}
       {tab === 'account' && (
         <div className="card">
@@ -2539,7 +2555,7 @@ function SettingsPage({
 
       {tab === 'connections' && (
         <>
-          <div className="nav-group">CONNECTIONS</div>
+          <div className="nav-group">Connections</div>
           <div className="card">
             {(
               [
