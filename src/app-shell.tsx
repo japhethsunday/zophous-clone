@@ -1378,7 +1378,7 @@ export default function AppShell() {
         </div>
       </aside>
 
-      <main className="app-main">
+      <div className="app-col">
         <div className="app-top">
           <button className="mob-burger" aria-label="Open menu" onClick={() => setNavOpen(true)}>
             <span /><span /><span />
@@ -1432,6 +1432,7 @@ export default function AppShell() {
             </div>
           </div>
         </div>
+        <main className="app-main">
         {toast && <div className="toast">{toast}</div>}
 
         {page === 'home' && profile && (
@@ -1524,7 +1525,8 @@ export default function AppShell() {
             }}
           />
         )}
-      </main>
+        </main>
+      </div>
 
       {postClip && (
         <PostModal

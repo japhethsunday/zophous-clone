@@ -1343,3 +1343,24 @@ a.bento-card:hover { border-color: var(--accent-line); box-shadow: var(--shadow-
 .home-side { gap: 20px; }
 .home-side .card { margin: 0; }
 @media (max-width: 860px) { .app-top { margin: -20px -16px 22px; padding: 10px 16px; } }
+
+/* Full-width header column: the account bar spans to the window edge like the sidebar spans the height */
+.shell.pro { --side-w: 252px; background: linear-gradient(90deg, var(--raise) calc(var(--side-w) - 1px), var(--line) calc(var(--side-w) - 1px), var(--line) var(--side-w), var(--panel) var(--side-w)); }
+.shell.pro.is-collapsed { --side-w: 72px; }
+.pro-side { border-right: 0; background: transparent; }
+.app-col { min-width: 0; display: flex; flex-direction: column; }
+.app-col > .app-top {
+  position: sticky; top: 0; z-index: 30; margin: 0; height: 68px; padding: 0 28px;
+  display: flex; align-items: center; gap: 14px;
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  backdrop-filter: saturate(160%) blur(12px); -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.app-col > .app-main { width: 100%; }
+.shell.pro .app-col > .app-main { padding-top: 32px; }
+@media (max-width: 860px) {
+  .shell.pro, .shell.pro.is-collapsed { background: var(--panel); }
+  .pro-side { background: var(--raise); }
+  .app-col > .app-top { height: 60px; padding: 0 16px; margin: 0; }
+  .shell.pro .app-col > .app-main { padding-top: 20px; }
+}
