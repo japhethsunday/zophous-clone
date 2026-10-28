@@ -2,8 +2,14 @@
 #   web    – the site at http://localhost:8080
 #   worker – clipping and generation jobs (from worker/)
 #   ollama – local model the worker uses
-# Start:  docker compose up -d --build      Stop: docker compose down
-# Same project name as worker/ so existing containers are reused.
+#
+# Start or update:   docker compose up -d --build web
+#                    (web rebuilds in about a minute; worker and ollama start as they are)
+# Update the worker: docker build -f worker/Dockerfile.update -t worker-worker:latest worker
+#                    docker compose up -d --no-build worker
+# Stop everything:   docker compose down
+#
+# Same project name as worker/ so the running containers are reused.
 name: worker
 
 include:
