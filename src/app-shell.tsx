@@ -382,9 +382,9 @@ function PostModal({
 /* ---------------- gen studio (real AI generation via Edge Functions) ---------------- */
 
 const GEN_MODELS = [
-  { id: 'story-free', name: 'Story video · Free', kind: 'video', tag: 'Topic → script, voice, scenes, captions', accent: 'var(--c4)' },
-  { id: 'wan-free', name: 'Wan 2.2 · Free', kind: 'video', tag: 'Open model, ~1–3 min, 480p', accent: 'var(--c3)' },
-  { id: 'flux-free', name: 'FLUX · Free', kind: 'image', tag: 'Open model, fast stills', accent: 'var(--c2)' },
+  { id: 'story-free', name: 'Story video', kind: 'video', tag: 'Script, voiceover, scenes and captions', accent: 'var(--c4)' },
+  { id: 'wan-free', name: 'Wan 2.2', kind: 'video', tag: 'Short motion clip, 480p', accent: 'var(--c3)' },
+  { id: 'flux-free', name: 'FLUX', kind: 'image', tag: 'Still image', accent: 'var(--c2)' },
 ] as const;
 
 const GEN_ASPECTS = ['9:16', '16:9', '1:1'] as const;
@@ -611,97 +611,98 @@ function GenPage({
 
       {tab === 'create' && (
         <>
-          <div className="gen-grid gen-single">
-            <div className="gen-panel gen-composer">
-              <div className="gen-panel-head">
-                <h3>What are we creating today?</h3>
-                <span className="gen-kind">
-                  {model.kind === 'video' ? 'Video' : 'Image'} · {cost} cr
-                </span>
-              </div>
-              <textarea
-                className="gen-input"
-                rows={3}
-                placeholder="Describe the shot — subject, motion, lighting, mood…"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
-              {prompts.length > 0 && (
-                <div className="gen-chips">
-                  {prompts.slice(0, 8).map((p) => (
-                    <button key={p.id} className="gen-chip" onClick={() => usePreset(p)} title={p.prompt}>
-                      {p.title}
-                    </button>
-                  ))}
+          <div className="gx">
+            <section className="gx-main">
+              <label className="gx-label" htmlFor="gx-prompt">Prompt</label>
+              <div className="gx-prompt">
+                <textarea
+                  id="gx-prompt"
+                  rows={6}
+                  placeholder={model.id === 'story-free' ? 'A topic, e.g. Why octopuses are the smartest animals in the ocean' : 'Describe the shot: subject, motion, lighting, mood'}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !busy) generate();
+                  }}
+                />
+                <div className="gx-prompt-foot">
+                  <span>{prompt.length} characters</span>
+                  <span className="gx-kbd">Ctrl + Enter to generate</span>
                 </div>
+              </div>
+              {prompts.length > 0 && (
+                <>
+                  <span className="gx-label">Start from a format</span>
+                  <div className="gx-formats">
+                    {prompts.slice(0, 8).map((p) => (
+                      <button key={p.id} onClick={() => usePreset(p)} title={p.prompt}>
+                        {p.title}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
-              <p className="gen-tip">Describe the subject, motion, lighting and mood. Tap a format to start from a template.</p>
-              {brand && (
-                <label className="gen-brand-toggle">
-                  <input type="checkbox" checked={applyBrand} onChange={(e) => setApplyBrand(e.target.checked)} />
-                  Apply brand style
-                  {brand.brand_name ? ` — ${brand.brand_name}` : ''} (colors, typography, CTA woven into the prompt)
-                </label>
-              )}
-              <div className="gen-opt-row">
-                <span className="gen-opt-label">Model</span>
+            </section>
+
+            <aside className="gx-side">
+              <span className="gx-label">Model</span>
+              <div className="gx-models" role="radiogroup">
                 {GEN_MODELS.map((m) => (
                   <button
                     key={m.id}
-                    className={`gen-opt${m.id === modelId ? ' on' : ''}`}
+                    role="radio"
+                    aria-checked={m.id === modelId}
+                    className={`gx-model${m.id === modelId ? ' on' : ''}`}
                     onClick={() => setModelId(m.id)}
-                    title={m.tag}
                   >
-                    <span className="gen-model-dot" style={{ background: m.accent }} /> {m.name}
+                    <span className="gx-model-ic"><Ic name={m.kind === 'image' ? 'sparkles' : m.id === 'story-free' ? 'play' : 'film'} size={15} /></span>
+                    <span className="gx-model-txt">
+                      <strong>{m.name}</strong>
+                      <em>{m.tag}</em>
+                    </span>
+                    <span className="gx-radio" />
                   </button>
                 ))}
               </div>
-              {model.kind === 'video' && (
-                <div className="gen-opt-row">
-                  <span className="gen-opt-label">Length</span>
-                  {(model.id === 'story-free' ? [30, 60, 90] : model.id === 'wan-free' ? [3, 5] : [5, 10]).map((d) => (
-                    <button
-                      key={d}
-                      className={`gen-opt sm${durationSeconds === d ? ' on' : ''}`}
-                      onClick={() => setDuration(d)}
-                    >
-                      {d}s
-                    </button>
-                  ))}
-                  <span className="gen-opt-label" style={{ marginLeft: 12 }}>
-                    Quality
-                  </span>
-                  {['720p', '1080p'].map((r) => (
-                    <button
-                      key={r}
-                      className={`gen-opt sm${resolution === r ? ' on' : ''}`}
-                      onClick={() => setResolution(r)}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="gen-opt-row">
-                <span className="gen-opt-label">Aspect</span>
-                {GEN_ASPECTS.map((a) => (
-                  <button
-                    key={a}
-                    className={`gen-opt sm${aspect === a ? ' on' : ''}`}
-                    onClick={() => setAspect(a)}
-                  >
-                    {a}
-                  </button>
-                ))}
-              </div>
-              <div className="gen-composer-foot">
-                <span className="gen-eta">{busy ? 'Starting…' : `${cost} credits · ${model.name}`}</span>
-                <button className="gen-btn" disabled={busy} onClick={generate}>
-                  {busy ? 'Starting…' : 'Generate'}
-                </button>
-              </div>
-            </div>
 
+              {model.kind === 'video' && (
+                <>
+                  <span className="gx-label">Length</span>
+                  <div className="seg gx-seg">
+                    {(model.id === 'story-free' ? [30, 60, 90] : model.id === 'wan-free' ? [3, 5] : [5, 10]).map((d) => (
+                      <button key={d} className={durationSeconds === d ? 'on' : ''} onClick={() => setDuration(d)}>
+                        {d}s
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <span className="gx-label">Aspect ratio</span>
+              <div className="seg gx-seg">
+                {GEN_ASPECTS.map((x) => (
+                  <button key={x} className={aspect === x ? 'on' : ''} onClick={() => setAspect(x)}>
+                    {x}
+                  </button>
+                ))}
+              </div>
+
+              {brand && (
+                <label className="gx-switch">
+                  <input type="checkbox" checked={applyBrand} onChange={(e) => setApplyBrand(e.target.checked)} />
+                  <span>Use brand kit{brand.brand_name ? ` (${brand.brand_name})` : ''}</span>
+                </label>
+              )}
+
+              <div className="gx-cost">
+                <span>Cost</span>
+                <strong>{cost} credits</strong>
+              </div>
+              <button className="btn btn-purple gx-go" disabled={busy || !prompt.trim()} onClick={generate}>
+                {busy ? 'Starting…' : 'Generate'}
+              </button>
+              <p className="gx-note">{creditsLeft} credits left this month</p>
+            </aside>
           </div>
 
         </>
@@ -840,7 +841,7 @@ function GenPage({
                 </span>
               )}
               <span>
-                {g.model} · {g.kind} · {g.aspect} · {g.resolution} ·{' '}
+                {GEN_MODELS.find((m) => m.id === g.model)?.name ?? g.model} · {g.aspect} ·{' '}
                 {new Date(g.created_at).toLocaleString('en-US', {
                   month: 'short',
                   day: 'numeric',
