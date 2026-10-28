@@ -1272,13 +1272,6 @@ export default function AppShell() {
 
   return (
     <div className={`shell pro${collapsed ? ' is-collapsed' : ''}${page === 'gen' ? ' gen-mode' : ''}`}>
-      <div className="mob-bar">
-        <button className="mob-burger" aria-label="Open menu" onClick={() => setNavOpen(true)}>
-          <span /><span /><span />
-        </button>
-        <span className="logo"><span className="logo-mark">C</span> Cloudnivo</span>
-        {profile && <span className="mob-credits">{profile.credits_balance} cr</span>}
-      </div>
       {navOpen && <div className="nav-scrim" onClick={() => setNavOpen(false)} />}
 
       <aside className={`pro-side${collapsed ? ' collapsed' : ''}${navOpen ? ' open' : ''}`} aria-label="Main navigation">
@@ -1318,10 +1311,8 @@ export default function AppShell() {
                 ['analytics', 'Analytics', 'chart'],
                 ['dna', 'DNA Profile', 'activity'],
               ]],
-              ['Workspace', [
+              ['Brand', [
                 ['brand', 'Brand kit', 'diamond'],
-                ['billing', 'Billing', 'card'],
-                ['settings', 'Settings', 'sliders'],
               ]],
             ] as const
           ).map(([group, items]) => (
@@ -1343,56 +1334,63 @@ export default function AppShell() {
             </div>
           ))}
         </nav>
-
-        {profile && (
-          <div className="ps-usage" title="Monthly allowance">
-            <div className="ps-meter">
-              <div><span>Minutes</span><b>{minutesLeft}/{profile.minutes_limit}</b></div>
-              <i><u style={{ width: `${profile.minutes_limit ? Math.min(100, Math.round((minutesLeft / profile.minutes_limit) * 100)) : 0}%` }} /></i>
-            </div>
-            <div className="ps-meter">
-              <div><span>Credits</span><b>{profile.credits_balance}</b></div>
-              <i><u className="alt" style={{ width: `${PLANS[profile.plan].credits ? Math.min(100, Math.round((profile.credits_balance / PLANS[profile.plan].credits) * 100)) : 0}%` }} /></i>
-            </div>
-            {profile.plan === 'free' && (
-              <button className="btn btn-purple sm ps-upgrade" onClick={() => { setPage('billing'); setNavOpen(false); }}>
-                <Ic name="zap" size={14} /> <span>Upgrade</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        <div className="ps-user top-menu">
-          <button
-            className="ps-user-btn"
-            aria-expanded={menu === 'account'}
-            onClick={() => setMenu(menu === 'account' ? null : 'account')}
-          >
-            <span className="top-avatar">{(profile?.display_name ?? 'C').slice(0, 1).toUpperCase()}</span>
-            <span className="ps-user-name">{profile?.display_name ?? 'Account'}</span>
-            <span className="ps-chev">⋯</span>
-          </button>
-          {menu === 'account' && (
-            <div className="top-pop up" role="menu">
-              <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); setNavOpen(false); }}>
-                <Ic name="sliders" size={15} /> Settings
-              </button>
-              <a role="menuitem" href="#/">← Back to site</a>
-              <button
-                role="menuitem"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  setSession(false);
-                }}
-              >
-                Sign out
-              </button>
-            </div>
-          )}
-        </div>
       </aside>
 
       <main className="app-main">
+        <div className="app-top">
+          <button className="mob-burger" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+            <span /><span /><span />
+          </button>
+          <div className="app-top-right">
+            {profile && (
+              <button className="top-meter" onClick={() => setPage('billing')} title="Your monthly allowance">
+                <span><b>{minutesLeft}</b> min</span>
+                <span><b>{profile.credits_balance}</b> credits</span>
+              </button>
+            )}
+            {profile?.plan === 'free' && (
+              <button className="btn btn-purple sm" onClick={() => setPage('billing')}>
+                <Ic name="zap" size={14} /> Upgrade
+              </button>
+            )}
+            <div className="top-menu">
+              <button
+                className="top-avatar"
+                aria-label="Account menu"
+                aria-expanded={menu === 'account'}
+                onClick={() => setMenu(menu === 'account' ? null : 'account')}
+              >
+                {(profile?.display_name ?? 'C').slice(0, 1).toUpperCase()}
+              </button>
+              {menu === 'account' && (
+                <div className="top-pop right" role="menu">
+                  {profile && (
+                    <div className="top-pop-head">
+                      <strong>{profile.display_name ?? 'Account'}</strong>
+                      <span>{PLANS[profile.plan].name} · resets {resetLabel()}</span>
+                    </div>
+                  )}
+                  <button role="menuitem" onClick={() => { setPage('billing'); setMenu(null); }}>
+                    <Ic name="card" size={15} /> Billing &amp; plan
+                  </button>
+                  <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); }}>
+                    <Ic name="sliders" size={15} /> Settings
+                  </button>
+                  <a role="menuitem" href="#/">← Back to site</a>
+                  <button
+                    role="menuitem"
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      setSession(false);
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
         {toast && <div className="toast">{toast}</div>}
 
         {page === 'home' && profile && (

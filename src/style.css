@@ -1229,24 +1229,21 @@ a.bento-card:hover { border-color: var(--accent-line); box-shadow: var(--shadow-
 .ps-link.on::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--aurora); }
 .ps-badge { margin-left: auto; font-style: normal; font-size: 11px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border-radius: 999px; padding: 1px 7px; }
 
-.ps-usage { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
-.ps-meter { display: grid; gap: 5px; }
-.ps-meter > div { display: flex; justify-content: space-between; font-size: 12px; color: var(--faint); }
-.ps-meter b { color: var(--ink); font-variant-numeric: tabular-nums; }
-.ps-meter i { display: block; height: 5px; border-radius: 99px; background: var(--line); overflow: hidden; }
-.ps-meter u { display: block; height: 100%; border-radius: inherit; background: var(--accent); text-decoration: none; }
-.ps-meter u.alt { background: var(--accent-2); }
-.ps-upgrade { width: 100%; justify-content: center; }
 
-.ps-user { position: relative; }
-.ps-user-btn {
-  display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px; border-radius: 12px; border: 0;
-  background: none; cursor: pointer; color: var(--ink); font: 600 14px var(--font-sans); text-align: left;
-}
-.ps-user-btn:hover { background: var(--panel-warm); }
-.ps-user-btn .top-avatar { width: 32px; height: 32px; font-size: 13px; flex: none; display: grid; place-items: center; }
-.ps-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.ps-chev { margin-left: auto; color: var(--faint); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .top-pop.up { top: auto; bottom: calc(100% + 8px); left: 0; right: 0; }
 
 /* collapsed rail: icons only, labels become tooltips */
@@ -1265,20 +1262,17 @@ a.bento-card:hover { border-color: var(--accent-line); box-shadow: var(--shadow-
 .is-collapsed .ps-link { justify-content: center; padding: 0; }
 .is-collapsed .ps-link.on::before { left: -10px; }
 .is-collapsed .ps-new { width: 44px; margin: 0 auto; }
-.is-collapsed .ps-user-btn { justify-content: center; }
+
 .is-collapsed .top-pop.up { right: auto; min-width: 200px; }
 
 /* phones: slide-out drawer + slim bar */
 .mob-bar, .nav-scrim { display: none; }
 @media (max-width: 860px) {
   .shell.pro, .shell.pro.is-collapsed { grid-template-columns: 1fr; }
-  .mob-bar {
-    display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 40; height: 56px; padding: 0 14px;
-    background: color-mix(in srgb, var(--raise) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
-  }
+
   .mob-burger { width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 10px; background: var(--raise); display: grid; place-content: center; gap: 4px; cursor: pointer; }
   .mob-burger span { display: block; width: 16px; height: 2px; border-radius: 2px; background: var(--ink); }
-  .mob-credits { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent-deep); background: var(--accent-soft); border-radius: 99px; padding: 4px 10px; }
+
   .nav-scrim { display: block; position: fixed; inset: 0; z-index: 49; background: rgb(11 12 26 / .45); }
   .pro-side, .is-collapsed .pro-side {
     position: fixed; z-index: 50; left: 0; top: 0; bottom: 0; width: min(300px, 86vw); height: 100dvh;
@@ -1295,3 +1289,23 @@ a.bento-card:hover { border-color: var(--accent-line); box-shadow: var(--shadow-
   .shell.pro .app-main { padding: 20px 16px 64px; }
 }
 @media (prefers-reduced-motion: reduce) { .shell.pro, .pro-side { transition: none; } }
+
+/* Top-right account bar (account items live here; the sidebar holds tools only) */
+.app-top { display: flex; align-items: center; gap: 12px; margin: -8px 0 22px; }
+.app-top-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.top-meter {
+  display: flex; gap: 12px; height: 36px; padding: 0 14px; border-radius: var(--radius-pill); align-items: center;
+  border: 1px solid var(--line); background: var(--raise); font: 500 13px var(--font-sans); color: var(--muted); cursor: pointer;
+}
+.top-meter:hover { border-color: var(--accent-line); }
+.top-meter b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.top-avatar { display: grid; place-items: center; }
+.top-pop-head { padding: 10px 12px 8px; display: grid; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.top-pop-head span { font-size: 12px; color: var(--faint); }
+.app-top .mob-burger { display: none; }
+@media (max-width: 860px) {
+  .app-top { position: sticky; top: 0; z-index: 40; margin: -20px -16px 18px; padding: 10px 16px;
+    background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  .app-top .mob-burger { display: grid; }
+  .top-meter span:last-child { display: none; }
+}
