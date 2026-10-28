@@ -1417,3 +1417,79 @@ h1, .hero2 h1, .split-hero h1 { font-weight: 650 !important; letter-spacing: -.0
 h2 { font-weight: 600 !important; }
 .btn-purple, .btn-purple:hover { background: var(--accent) !important; color: #fff !important; box-shadow: none !important; filter: none !important; }
 .btn-purple:hover { background: var(--accent-hover) !important; }
+
+/* ============================================================
+   Cloudnivo design system v3 — dashboard patterns
+   Command bar, tool tiles, segmented control, empty state, setup card.
+   See docs/design-system.md
+   ============================================================ */
+:root {
+  --tone-violet: #6d4cff; --tone-blue: #2f7bf6; --tone-pink: #e5488f;
+  --tone-amber: #f08c1a; --tone-teal: #10a3a3; --tone-green: #21a35b;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+.dash { display: flex; flex-direction: column; gap: 28px; }
+.cmd-hero {
+  position: relative; text-align: center; padding: 48px 24px 36px;
+  border: 1px solid var(--line); border-radius: 16px; background: var(--raise);
+  background-image: radial-gradient(60% 120% at 50% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%);
+}
+.cmd-hello { margin: 0 0 6px; color: var(--faint); font: 500 12px/1 var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }
+.cmd-title { margin: 0 0 22px; font-size: clamp(24px, 3vw, 32px); }
+.cmd-bar {
+  display: flex; align-items: center; gap: 10px; max-width: 640px; margin: 0 auto;
+  padding: 6px 6px 6px 16px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--raise);
+  box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 6px 20px -10px color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent); transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+.cmd-bar:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent); }
+.cmd-bar input { flex: 1; min-width: 0; border: 0 !important; outline: 0; background: transparent; font-size: 15px; color: var(--ink); padding: 10px 0; box-shadow: none !important; }
+.cmd-kind { font: 500 11px/1 var(--font-mono); color: var(--faint); white-space: nowrap; }
+.cmd-go { width: 38px; height: 38px; border-radius: 9px; border: 0; display: grid; place-items: center; background: var(--accent); color: #fff; transition: background .15s; }
+.cmd-go:hover:not(:disabled) { background: var(--accent-hover); }
+.cmd-go:disabled { background: var(--line-strong); cursor: default; }
+.cmd-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+.cmd-chips button { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 999px; padding: 6px 12px; font-size: 13px; transition: border-color .15s, color .15s; }
+.cmd-chips button:hover { border-color: var(--accent-line); color: var(--accent-deep); }
+
+.dash-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dash-h { margin: 0; font-size: 16px; font-weight: 600 !important; letter-spacing: -.01em; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 9px; background: var(--panel-warm); border: 1px solid var(--line); }
+.seg button { border: 0; background: transparent; color: var(--muted); font-size: 13px; padding: 5px 12px; border-radius: 6px; }
+.seg button.on { background: var(--raise); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.tool-tile { display: flex; align-items: center; gap: 12px; padding: 12px; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--raise); transition: border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease); }
+.tool-tile:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: 0 6px 16px -10px rgb(0 0 0 / .18); }
+.tool-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tool-txt strong { font-size: 14px; font-weight: 600; color: var(--ink); }
+.tool-txt span { font-size: 12.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tool-ic { flex: none; width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; color: #fff; box-shadow: inset 0 -2px 0 rgb(0 0 0 / .12); }
+.tone-violet { background: var(--tone-violet); } .tone-blue { background: var(--tone-blue); } .tone-pink { background: var(--tone-pink); }
+.tone-amber { background: var(--tone-amber); } .tone-teal { background: var(--tone-teal); } .tone-green { background: var(--tone-green); }
+
+.dash-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 24px; border: 1px dashed var(--line-strong); border-radius: 12px; background: var(--raise); }
+.empty-state strong { font-size: 15px; margin-top: 6px; }
+.empty-state p { margin: 0 0 8px; max-width: 360px; color: var(--muted); font-size: 13.5px; }
+.setup { padding: 16px !important; }
+.setup .card-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.setup .card-head h3 { margin: 0; font-size: 14px; }
+.setup .card-head em { font: 500 12px var(--font-mono); font-style: normal; color: var(--faint); }
+.setup-bar { height: 4px; border-radius: 4px; background: var(--panel-warm); overflow: hidden; margin-bottom: 8px; }
+.setup-bar i { display: block; height: 100%; background: var(--accent); }
+.setup-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 6px; border: 0; border-radius: 8px; background: none; text-align: left; font-size: 13.5px; color: var(--ink); }
+.setup-item:hover:not(:disabled) { background: var(--panel); }
+.setup-item:disabled { color: var(--faint); cursor: default; }
+.setup-item.done span:last-child { text-decoration: line-through; }
+.setup-dot { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; color: var(--faint); }
+.setup-item.done .setup-dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (max-width: 960px) { .dash-cols { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .cmd-hero { padding: 32px 14px 24px; }
+  .cmd-kind { display: none; }
+  .dash-row { flex-wrap: wrap; }
+  .tool-grid { grid-template-columns: 1fr 1fr; }
+  .tool-txt span { display: none; }
+}
+.dash .clip-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }

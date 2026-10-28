@@ -1533,106 +1533,128 @@ function HomePage({
     ['first_post', 'Post or schedule a clip', 'Post now or schedule a week ahead — TikTok and YouTube.', 'Go to your clips', 'clips', !checklist.connected],
     ['dna', 'Unlock your DNA Profile', 'See which hooks and topics go viral for you, then create clips with that recipe.', 'Open DNA Profile', 'dna', !checklist.connected],
   ];
+  const [cmd, setCmd] = useState('');
+  const [filter, setFilter] = useState<'all' | 'clip' | 'create' | 'publish'>('all');
+  const firstName = (profile.display_name ?? 'there').split(/[\s@._-]/)[0];
+  const isUrl = (v: string) => /^(https?:\/\/|www\.|youtu)/i.test(v.trim());
+  const run = (v = cmd) => {
+    const t = v.trim();
+    if (!t) return;
+    if (isUrl(t)) {
+      sessionStorage.setItem('cn_link', t);
+      onNav('clips');
+    } else {
+      sessionStorage.setItem('cn_gen_prompt', t);
+      onNav('gen');
+    }
+  };
+  const tools: Array<{ t: string; d: string; p: Page; icon: string; tone: string; group: 'clip' | 'create' | 'publish' }> = [
+    { t: 'Clips', d: 'Long video to vertical shorts', p: 'clips', icon: 'scissors', tone: 'violet', group: 'clip' },
+    { t: 'Studio', d: 'Edit talking-head videos', p: 'studio', icon: 'film', tone: 'blue', group: 'clip' },
+    { t: 'Story video', d: 'Topic to narrated video', p: 'gen', icon: 'play', tone: 'pink', group: 'create' },
+    { t: 'Images', d: 'Stills and thumbnails', p: 'gen', icon: 'sparkles', tone: 'amber', group: 'create' },
+    { t: 'Brand kit', d: 'Colours, fonts, logo', p: 'brand', icon: 'diamond', tone: 'teal', group: 'create' },
+    { t: 'Posts', d: 'Schedule TikTok and YouTube', p: 'posts', icon: 'calendar', tone: 'green', group: 'publish' },
+    { t: 'Analytics', d: 'Views and retention', p: 'analytics', icon: 'chart', tone: 'blue', group: 'publish' },
+    { t: 'DNA Profile', d: 'What works for you', p: 'dna', icon: 'activity', tone: 'violet', group: 'publish' },
+  ];
+  const shown = tools.filter((x) => filter === 'all' || x.group === filter);
   return (
-    <div className="page-pad">
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-sub">Welcome back, {profile.display_name ?? 'creator'} — here's your studio today.</p>
-        </div>
-        <div className="page-actions">
-          <button className="btn btn-outline sm" onClick={() => onNav('gen')}>
-            <Ic name="sparkles" size={14} /> Generate
+    <div className="page-pad dash">
+      <section className="cmd-hero">
+        <p className="cmd-hello">Hi {firstName}</p>
+        <h1 className="cmd-title">What are we making today?</h1>
+        <form
+          className="cmd-bar"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run();
+          }}
+        >
+          <Ic name="sparkles" size={18} />
+          <input
+            value={cmd}
+            onChange={(e) => setCmd(e.target.value)}
+            placeholder="Paste a YouTube link, or describe a video to generate"
+            aria-label="Paste a link or describe a video"
+          />
+          <span className="cmd-kind">{cmd.trim() ? (isUrl(cmd) ? 'Clip link' : 'Generate') : ''}</span>
+          <button className="cmd-go" type="submit" aria-label="Start" disabled={!cmd.trim()}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
           </button>
-          <button className="btn btn-purple sm" onClick={() => onNav('clips')}>
-            <Ic name="scissors" size={14} /> Create clips
-          </button>
+        </form>
+        <div className="cmd-chips">
+          <button onClick={() => onNav('clips')}>Upload a video</button>
+          <button onClick={() => run('A 60 second story about how octopuses think')}>Story video</button>
+          <button onClick={() => run('Product photo of a matte black water bottle on stone, soft light')}>Product shot</button>
+          <button onClick={() => onNav('studio')}>Edit in Studio</button>
         </div>
-      </div>
-      <div className="home-top">
-        <div className="checklist card">
-          <div className="card-head">
-            <h3>Getting started</h3>
-            <em>{doneCount} of 4 done</em>
-          </div>
-          {items.map(([k, t, d, cta, target, locked], i) => (
-            <div className={`check-item${checklist[k] ? ' done' : ''}`} key={k}>
-              <span className="check-num">{checklist[k] ? <Ic name="check" size={13} /> : i + 1}</span>
-              <div>
-                <strong>{t}</strong>
-                <p>{d}</p>
-              </div>
-              {!checklist[k] &&
-                (locked ? (
-                  <button className="btn btn-outline sm locked" disabled title="Connect TikTok or YouTube first">
-                    <Ic name="lock" size={13} /> {cta}
-                  </button>
-                ) : (
-                  <button className="btn btn-outline sm" onClick={() => onNav(target)}>
-                    {cta}
-                  </button>
-                ))}
-            </div>
+      </section>
+
+      <div className="dash-row">
+        <h2 className="dash-h">Tools</h2>
+        <div className="seg" role="tablist">
+          {(['all', 'clip', 'create', 'publish'] as const).map((k) => (
+            <button key={k} role="tab" aria-selected={filter === k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>
+              {k === 'all' ? 'All' : k[0].toUpperCase() + k.slice(1)}
+            </button>
           ))}
         </div>
-        <div className="home-side">
-          <div className="card ws-card">
-            <div className="ws-avatar">{workspaceName[0]?.toUpperCase() ?? 'M'}</div>
-            <strong>{workspaceName}</strong>
-            <p>Welcome back, {profile.display_name ?? 'creator'}.</p>
-          </div>
-          <div className="card discord-card">
-            <strong>Join the Cloudnivo Discord</strong>
-            <p>Support, giveaways, early access &amp; tutorials with other creators.</p>
-            <button className="btn btn-outline sm" onClick={() => { location.hash = '#/community'; }}>
-              Join Discord
-            </button>
-          </div>
-        </div>
       </div>
-
-      <div className="nav-group" style={{ marginTop: 24 }}>
-        QUICK ACTIONS
-      </div>
-      <div className="qa-grid">
-        {(
-          [
-            ['Clips', 'Fast clips from a link or upload', 'clips', 'scissors'],
-            ['Studio', 'Edit your talking-head videos', 'studio', 'film'],
-            ['Posts', 'Your posting calendar', 'posts', 'calendar'],
-            ['DNA Profile', 'What goes viral for you', 'dna', 'activity'],
-            ['Analytics', 'TikTok and YouTube performance', 'analytics', 'chart'],
-            ['Settings', 'Account, connections, workspace', 'settings', 'sliders'],
-          ] as const
-        ).map(([t, d, p, icon]) => (
-          <button className="qa-card" key={t} onClick={() => onNav(p)}>
-            <span className="qa-ic"><Ic name={icon} /></span>
-            <strong>{t}</strong>
-            <span>{d}</span>
+      <div className="tool-grid">
+        {shown.map((x) => (
+          <button className="tool-tile" key={x.t} onClick={() => onNav(x.p)}>
+            <span className={`tool-ic tone-${x.tone}`}><Ic name={x.icon} size={18} /></span>
+            <span className="tool-txt">
+              <strong>{x.t}</strong>
+              <span>{x.d}</span>
+            </span>
           </button>
         ))}
       </div>
 
-      <div className="nav-group" style={{ marginTop: 24 }}>
-        BRAND ASSETS
-      </div>
-      <div className="card brand-assets">
-        <div className="ws-avatar big">{workspaceName[0]?.toUpperCase() ?? 'C'}</div>
-        <div>
-          <strong>Square Logo</strong>
-          <p>Profile / watermark</p>
-        </div>
-        <button className="btn btn-outline sm" style={{ marginLeft: 'auto' }} onClick={() => onNav('brand')}>
-          Generate logo
-        </button>
-      </div>
-
-      <h3 className="app-h3">Top clips</h3>
-      {clips.length === 0 && <p className="app-sub">No clips yet — paste a video in Clips.</p>}
-      <div className="clip-grid">
-        {clips.slice(0, 4).map((c) => (
-          <ClipCardView key={c.id} clip={c} onPost={onPost} />
-        ))}
+      <div className="dash-cols">
+        <section>
+          <div className="dash-row">
+            <h2 className="dash-h">Recent clips</h2>
+            {clips.length > 0 && (
+              <button className="lnk" onClick={() => onNav('clips')}>View all</button>
+            )}
+          </div>
+          {clips.length === 0 ? (
+            <div className="empty-state">
+              <span className="tool-ic tone-violet"><Ic name="scissors" size={18} /></span>
+              <strong>No clips yet</strong>
+              <p>Paste a link above or upload a video. Clips show up here when they are ready.</p>
+              <button className="btn btn-purple sm" onClick={() => onNav('clips')}>Create clips</button>
+            </div>
+          ) : (
+            <div className="clip-grid">
+              {clips.slice(0, 6).map((c) => (
+                <ClipCardView key={c.id} clip={c} onPost={onPost} />
+              ))}
+            </div>
+          )}
+        </section>
+        <aside className="setup card">
+          <div className="card-head">
+            <h3>Set up {workspaceName}</h3>
+            <em>{doneCount}/4</em>
+          </div>
+          <div className="setup-bar"><i style={{ width: `${(doneCount / 4) * 100}%` }} /></div>
+          {items.map(([k, t, , cta, target, locked]) => (
+            <button
+              className={`setup-item${checklist[k] ? ' done' : ''}`}
+              key={k}
+              disabled={locked || checklist[k]}
+              onClick={() => onNav(target)}
+              title={locked ? 'Connect TikTok or YouTube first' : cta}
+            >
+              <span className="setup-dot">{checklist[k] ? <Ic name="check" size={12} /> : locked ? <Ic name="lock" size={11} /> : null}</span>
+              <span>{t}</span>
+            </button>
+          ))}
+        </aside>
       </div>
     </div>
   );
@@ -1661,7 +1683,7 @@ function ClipsPage({
   onPost: (c: Clip) => void;
   onUpgrade: () => void;
 }) {
-  const [tab, setTab] = useState<'link' | 'upload'>('upload');
+  const [tab, setTab] = useState<'link' | 'upload'>(() => (sessionStorage.getItem('cn_link') ? 'link' : 'upload'));
   const [file, setFile] = useState<File | null>(null);
   const [stage, setStage] = useState('');
   const [url, setUrl] = useState(() => {
