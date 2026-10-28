@@ -1,0 +1,27 @@
+# Fast update build: start from the already-built worker image (FFmpeg, Python deps,
+# speech model) and add only what changed. Avoids re-downloading ~1.5 GB.
+#
+#   docker tag worker-worker:latest cloudnivo-worker-base:1      (once, after a full build)
+#   docker build -f Dockerfile.update -t worker-worker:latest .
+FROM cloudnivo-worker-base:1
+
+USER root
+
+# Speech model was cached under /root at build time; make it readable for the worker user.
+ENV HF_HOME=/opt/hf
+RUN mkdir -p /opt/hf && cp -r /root/.cache/huggingface/. /opt/hf/ && chown -R worker /opt/hf
+
+COPY requirements-extra.txt .
+RUN pip install --no-cache-dir --retries 10 --timeout 120 -r requirements-extra.txt
+
+# Kokoro voiceover model (int8, ~114 MB) + voice pack (~28 MB). Apache-2.0 weights.
+RUN mkdir -p /app/models/kokoro && cd /app/models/kokoro \
+ && python -c "import urllib.request as u; b='https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/'; [u.urlretrieve(b+f, f) for f in ('kokoro-v1.0.int8.onnx', 'voices-v1.0.bin')]"
+ENV KOKORO_DIR=/app/models/kokoro
+
+RUN rm -rf /app/cloudnivo_worker
+COPY cloudnivo_worker ./cloudnivo_worker
+RUN chown -R worker /app
+USER worker
+
+CMD ["python", "-m", "cloudnivo_worker.main"]

@@ -8,7 +8,8 @@ services:
       OLLAMA_KEEP_ALIVE: 5m        # free the model's memory 5 minutes after the last use
       OLLAMA_NUM_PARALLEL: "1"
     # Pull the ranking model once on first start.
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull ${OLLAMA_MODEL:-qwen2.5:1.5b}; wait"]
+    # Keeps retrying on flaky connections; resumes where it stopped.
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5; until ollama pull ${OLLAMA_MODEL:-qwen2.5:1.5b}; do echo 'pull failed, retrying in 60s'; sleep 60; done; wait"]
     mem_limit: 2g
 
   worker:

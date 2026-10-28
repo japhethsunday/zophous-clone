@@ -12,3 +12,4 @@ vercel-deploy*.log
 worker/.env
 __pycache__/
 worker/build.log
+worker/update.log

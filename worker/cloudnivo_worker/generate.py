@@ -26,8 +26,15 @@ class QuotaError(RuntimeError):
 def _client(space: str):
     from gradio_client import Client
 
+    import httpx
+
     token = os.environ.get("HF_TOKEN") or None
-    return Client(space, hf_token=token, verbose=False)
+    # Patient timeouts: slow home connections time out on the TLS handshake with defaults.
+    slow = {"timeout": httpx.Timeout(600.0, connect=90.0)}
+    try:
+        return Client(space, token=token, verbose=False, httpx_kwargs=slow)  # gradio_client >= 2
+    except TypeError:
+        return Client(space, hf_token=token, verbose=False)  # gradio_client 1.x
 
 
 def _wrap(e: Exception) -> Exception:

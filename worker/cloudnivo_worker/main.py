@@ -20,7 +20,7 @@ WORKER_ID = os.environ.get("WORKER_ID") or socket.gethostname()
 IDLE_SLEEP = float(os.environ.get("IDLE_SLEEP", "5"))
 # Which job kinds this worker takes. The PC worker does both; Modal only clips.
 WORKER_KINDS = [k.strip() for k in os.environ.get("WORKER_KINDS", "clipping,generation").split(",") if k.strip()]
-MAX_ATTEMPTS = 3
+MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "5"))
 PERMANENT = {"video_too_short", "no_audio_track", "no_speech_found", "no video stream"}
 
 _stop = False
