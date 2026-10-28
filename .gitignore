@@ -11,3 +11,4 @@ vercel-deploy*.log
 !worker/.env.example
 worker/.env
 __pycache__/
+worker/build.log

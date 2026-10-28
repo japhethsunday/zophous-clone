@@ -1,0 +1,2 @@
+# Added after the heavy layers so updates do not re-download the speech model.
+gradio_client==2.7.2

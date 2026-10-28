@@ -6,7 +6,7 @@
 // The request/response shape is unchanged for the existing Gen Studio UI.
 
 import { corsHeaders, json, readJson } from '../_shared/http.ts';
-import { clampVideoSeconds, creditCost } from '../_shared/pricing.ts';
+import { FREE_MODELS, clampVideoSeconds, creditCost } from '../_shared/pricing.ts';
 import {
   OPENAI_KEY,
   REPLICATE_MODELS,
@@ -38,7 +38,56 @@ Deno.serve(async (req) => {
   const mode = String(payload.mode ?? 'create');
 
   try {
-    // ---------- create ----------
+    // ---------- create with a free open model (queued for the self-hosted worker) ----------
+    if (mode === 'create' && FREE_MODELS[String(payload.model)]) {
+      const model = String(payload.model);
+      const { kind, credits } = FREE_MODELS[model];
+      const prompt = String(payload.prompt ?? '').trim().slice(0, 1500);
+      if (!prompt) return json(req, { error: 'prompt_required' }, 400);
+      const aspect = ASPECTS.has(String(payload.aspect)) ? String(payload.aspect) : '9:16';
+      const durationSeconds = kind === 'video' ? Math.max(2, Math.min(5, Number(payload.durationSeconds) || 3.5)) : null;
+      const idem = payload.idempotencyKey ? String(payload.idempotencyKey).slice(0, 80) : null;
+
+      if (idem) {
+        const { data: existing } = await admin.from('jobs').select('ref_id').eq('user_id', user.id).eq('idempotency_key', idem).maybeSingle();
+        if (existing?.ref_id) {
+          const { data: gen } = await admin.from('generations').select('*').eq('id', existing.ref_id).single();
+          if (gen) return json(req, { generation: gen, creditsCharged: 0, duplicate: true });
+        }
+      }
+
+      const { data: job, error: jobErr } = await admin
+        .from('jobs')
+        .insert({
+          user_id: user.id, kind: 'generation', status: 'queued', provider: 'hf-zerogpu', ref_table: 'generations',
+          idempotency_key: idem, input: { kind, model, prompt, aspect, durationSeconds },
+        })
+        .select()
+        .single();
+      if (jobErr || !job) return json(req, { error: idem ? 'duplicate_in_progress' : 'insert_failed' }, idem ? 409 : 500);
+
+      const { data: held } = await admin.rpc('credit_hold', { p_user: user.id, p_job: job.id, p_amount: credits });
+      if (!held) {
+        await admin.from('jobs').update({ status: 'failed', error: 'INSUFFICIENT_CREDITS', completed_at: new Date().toISOString() }).eq('id', job.id);
+        return json(req, { error: 'INSUFFICIENT_CREDITS', needed: credits }, 402);
+      }
+      const { data: gen, error: genErr } = await admin
+        .from('generations')
+        .insert({
+          user_id: user.id, kind, model, prompt, aspect, duration_seconds: durationSeconds ? Math.round(durationSeconds) : null,
+          resolution: '480p', credit_cost: credits, status: 'queued', provider: 'hf-zerogpu', job_id: job.id,
+        })
+        .select()
+        .single();
+      if (genErr || !gen) {
+        await failJob(admin, job, 'insert_failed');
+        return json(req, { error: 'insert_failed' }, 500);
+      }
+      await admin.from('jobs').update({ ref_id: gen.id }).eq('id', job.id);
+      return json(req, { generation: gen, creditsCharged: credits });
+    }
+
+    // ---------- create (paid providers) ----------
     if (mode === 'create') {
       const kind = payload.kind === 'image' ? 'image' : 'video';
       const model = String(payload.model ?? (kind === 'image' ? 'gpt-image' : 'seedance-fast'));

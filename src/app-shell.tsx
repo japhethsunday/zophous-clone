@@ -6,6 +6,7 @@ import {
   fmtTime,
   ensureWorkspace,
   creditCostFor,
+  FREE_MODELS,
   withSignedUrls,
   withSignedClips,
   readVideoDuration,
@@ -421,6 +422,8 @@ function PostModal({
 /* ---------------- gen studio (real AI generation via Edge Functions) ---------------- */
 
 const GEN_MODELS = [
+  { id: 'wan-free', name: 'Wan 2.2 · Free', kind: 'video', tag: 'Open model, ~1–3 min, 480p', accent: 'var(--c3)' },
+  { id: 'flux-free', name: 'FLUX · Free', kind: 'image', tag: 'Open model, fast stills', accent: 'var(--c2)' },
   { id: 'seedance-fast', name: 'Seedance Lite', kind: 'video', tag: 'Fast vertical clips', accent: 'var(--c1)' },
   { id: 'seedance-pro', name: 'Seedance Pro', kind: 'video', tag: 'Richer motion detail', accent: 'var(--c4)' },
   { id: 'kling-2.1', name: 'Kling 2.1', kind: 'video', tag: 'Cinematic realism', accent: 'var(--c5)' },
@@ -480,7 +483,7 @@ function GenPage({
   const [applyBrand, setApplyBrand] = useState(false);
 
   const model = GEN_MODELS.find((m) => m.id === modelId) ?? GEN_MODELS[0];
-  const cost = creditCostFor(model.kind, resolution, model.kind === 'video' ? durationSeconds : null);
+  const cost = FREE_MODELS[model.id]?.credits ?? creditCostFor(model.kind, resolution, model.kind === 'video' ? durationSeconds : null);
   const creditsLeft = profile.credits_balance ?? 0;
   const creditsLimit = profile.credits_limit ?? 0;
 
@@ -503,7 +506,10 @@ function GenPage({
 
   // Poll in-flight Replicate jobs so status + result land without a manual reload.
   useEffect(() => {
-    const active = (gens ?? []).filter((g) => g.status === 'processing' && g.kind === 'video');
+    // Paid video jobs and free (worker-run) jobs of any kind finish in the background.
+    const active = (gens ?? []).filter(
+      (g) => (g.status === 'processing' && g.kind === 'video') || (g.provider === 'hf-zerogpu' && (g.status === 'queued' || g.status === 'processing')),
+    );
     if (active.length === 0) return;
     const t = setInterval(async () => {
       for (const g of active) {

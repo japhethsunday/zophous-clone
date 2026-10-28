@@ -18,6 +18,8 @@ log = logging.getLogger("cloudnivo-worker")
 
 WORKER_ID = os.environ.get("WORKER_ID") or socket.gethostname()
 IDLE_SLEEP = float(os.environ.get("IDLE_SLEEP", "5"))
+# Which job kinds this worker takes. The PC worker does both; Modal only clips.
+WORKER_KINDS = [k.strip() for k in os.environ.get("WORKER_KINDS", "clipping,generation").split(",") if k.strip()]
 MAX_ATTEMPTS = 3
 PERMANENT = {"video_too_short", "no_audio_track", "no_speech_found", "no video stream"}
 
@@ -34,7 +36,59 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def run_generation_job(db: Supa, job: dict) -> None:
+    """Free image/video generation (open models on Hugging Face ZeroGPU)."""
+    import tempfile
+
+    from .generate import QuotaError, make_image, make_video
+
+    jid, gid, uid = job["id"], job.get("ref_id"), job["user_id"]
+    inp = job["input"]
+    log.info("generation job %s claimed (%s, attempt %s)", jid, inp.get("model"), job.get("attempts"))
+    db.update("generations", f"id=eq.{gid}", {"status": "processing"})
+    db.update("jobs", f"id=eq.{jid}", {"progress": 10, "output": {"stage": "generating"}})
+    try:
+        with tempfile.TemporaryDirectory(prefix="cn-gen-") as tmp:
+            if inp.get("kind") == "image":
+                path = make_image(inp["prompt"], inp.get("aspect", "9:16"), tmp)
+                name, mime = "image" + os.path.splitext(path)[1], "image/webp" if path.endswith(".webp") else "image/png"
+            else:
+                db.update("jobs", f"id=eq.{jid}", {"progress": 30, "output": {"stage": "animating"}})
+                path, _still = make_video(inp["prompt"], inp.get("aspect", "9:16"), inp.get("durationSeconds") or 3.5, tmp)
+                name, mime = "video.mp4", "video/mp4"
+            key = f"{uid}/{jid}/{name}"
+            db.upload("outputs", key, path, mime)
+            db.insert("assets", {"user_id": uid, "bucket": "outputs", "path": key, "mime": mime,
+                                 "bytes": os.path.getsize(path), "origin_job_id": jid}, upsert_on="bucket,path")
+    except Exception as e:  # noqa: BLE001
+        msg = str(e)[:500]
+        quota = isinstance(e, QuotaError)
+        retry = int(job.get("attempts", 1)) < MAX_ATTEMPTS
+        log.exception("generation job %s failed (%s)", jid, "will retry" if retry else "final")
+        if retry:
+            wait = 20 if quota else 2  # minutes; free GPU quota refills over time
+            db.update("jobs", f"id=eq.{jid}", {
+                "status": "queued", "error": msg,
+                "next_poll_at": (datetime.now(timezone.utc) + timedelta(minutes=wait)).isoformat(),
+            })
+            db.update("generations", f"id=eq.{gid}", {"status": "queued"})
+            return
+        db.update("jobs", f"id=eq.{jid}", {"status": "failed", "error": msg, "completed_at": now()})
+        db.update("generations", f"id=eq.{gid}", {"status": "failed", "error": msg, "completed_at": now()})
+        db.rpc("credit_release", {"p_job": jid})
+        return
+
+    db.update("jobs", f"id=eq.{jid}", {"status": "succeeded", "progress": 100, "completed_at": now(),
+                                       "output": {"stage": "done", "path": key}})
+    db.update("generations", f"id=eq.{gid}", {"status": "ready", "result_path": key, "completed_at": now()})
+    db.rpc("credit_settle", {"p_job": jid, "p_actual": job.get("cost_quoted", 0)})
+    log.info("generation job %s done", jid)
+
+
 def run_job(db: Supa, job: dict) -> None:
+    if job.get("kind") == "generation":
+        run_generation_job(db, job)
+        return
     jid, vid = job["id"], job.get("ref_id")
     log.info("job %s claimed (attempt %s)", jid, job.get("attempts"))
 
@@ -100,7 +154,7 @@ def drain(max_seconds: float = 3300) -> int:
     deadline = time.monotonic() + max_seconds
     done = 0
     while time.monotonic() < deadline:
-        jobs = db.rpc("claim_clipping_job", {"p_worker": WORKER_ID}) or []
+        jobs = db.rpc("claim_job", {"p_worker": WORKER_ID, "p_kinds": WORKER_KINDS}) or []
         if not jobs:
             break
         try:
@@ -120,7 +174,7 @@ def main() -> None:
     log.info("worker %s started", WORKER_ID)
     while not _stop:
         try:
-            jobs = db.rpc("claim_clipping_job", {"p_worker": WORKER_ID}) or []
+            jobs = db.rpc("claim_job", {"p_worker": WORKER_ID, "p_kinds": WORKER_KINDS}) or []
         except Exception:  # noqa: BLE001
             log.exception("claim failed; retrying")
             time.sleep(IDLE_SLEEP * 3)

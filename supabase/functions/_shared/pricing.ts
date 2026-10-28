@@ -9,6 +9,12 @@ export function creditCost(kind: MediaKind, resolution: string, durationSeconds:
   return base * spans;
 }
 
+/** Free open models run on shared GPUs (no provider bill), so they cost few credits. */
+export const FREE_MODELS: Record<string, { kind: MediaKind; credits: number; name: string }> = {
+  'flux-free': { kind: 'image', credits: 1, name: 'FLUX schnell (free)' },
+  'wan-free': { kind: 'video', credits: 6, name: 'Wan 2.2 (free)' },
+};
+
 export function clampVideoSeconds(n: unknown): number {
   const v = Number(n ?? 5);
   if (!Number.isFinite(v)) return 5;

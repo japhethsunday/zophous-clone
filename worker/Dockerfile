@@ -16,6 +16,9 @@ ARG WHISPER_MODEL=small
 ENV WHISPER_MODEL=${WHISPER_MODEL}
 RUN python -c "from faster_whisper import WhisperModel; WhisperModel('${WHISPER_MODEL}', device='cpu', compute_type='int8')"
 
+COPY requirements-extra.txt .
+RUN pip install --no-cache-dir --retries 10 --timeout 120 -r requirements-extra.txt
+
 COPY cloudnivo_worker ./cloudnivo_worker
 RUN useradd --create-home worker && chown -R worker /app
 USER worker

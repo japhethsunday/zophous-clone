@@ -155,7 +155,7 @@ export const PLANS = {
 } as const;
 
 /** Same price table the generate-media Edge Function charges (one shared source). */
-export { creditCost as creditCostFor } from '../../supabase/functions/_shared/pricing';
+export { creditCost as creditCostFor, FREE_MODELS } from '../../supabase/functions/_shared/pricing';
 
 /** Replace each generation's private result_path with a short-lived signed URL for display. */
 export async function withSignedUrls(gens: Generation[]): Promise<Generation[]> {
