@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import AppShell from './app-shell';
+const AppShell = lazy(() => import('./app-shell'));
 import { Bento, HowItWorks, SplitHero } from './landing';
 import './style.css';
 
@@ -400,7 +400,7 @@ function Landing() {
 
 function App() {
   const route = useRoute();
-  if (route.startsWith('#/app')) return <AppShell />;
+  if (route.startsWith('#/app')) return <Suspense fallback={<div className="gate-loading">Loading…</div>}><AppShell /></Suspense>;
   if (route === '#/about') return <AboutPage />;
   if (route === '#/community') return <CommunityPage />;
   if (route === '#/terms') return <LegalPage kind="terms" />;

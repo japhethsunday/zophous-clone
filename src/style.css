@@ -1636,3 +1636,69 @@ h2 { font-weight: 600 !important; }
   .gh-side { grid-column: 2; }
   .gh-cost { text-align: left; min-width: 0; }
 }
+
+/* ============================================================
+   v4 "Cutting room" — final layer, keep last. See docs/design-system.md.
+   Ink for actions, caption-yellow (--signal) only for playing / selected / in range,
+   graphite only for the video stage. Mono only for timecodes.
+   ============================================================ */
+:root {
+  --bg: #f3f4f6; --panel: #f3f4f6; --panel-warm: #eceef1; --raise: #ffffff;
+  --ink: #15171c; --muted: #4a4f5c; --faint: #636977;
+  --line: rgb(21 23 28 / .10); --line-soft: rgb(21 23 28 / .06); --line-strong: rgb(21 23 28 / .20);
+  --accent: #15171c; --accent-hover: #2b2e36; --accent-deep: #15171c;
+  --accent-soft: rgb(255 210 63 / .28); --accent-line: rgb(21 23 28 / .35);
+  --signal: #ffd23f; --signal-ink: #15171c;
+  --stage: #1b1d22; --stage-raise: #25282f; --stage-line: rgb(255 255 255 / .10); --stage-ink: #eceef1; --stage-muted: #a3a8b4;
+  --danger: #c8333a; --low: #c8333a; --hi: #1d7d55; --mid: #8a6000;
+  --font-sans: 'Schibsted Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --aurora: var(--ink);
+  --r: 8px;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); letter-spacing: 0; font-feature-settings: 'tnum' 0; }
+:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px; box-shadow: 0 0 0 5px var(--signal) !important; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* drop template chrome: mono caps labels, gradients, rainbow tiles */
+.ps-label { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+.cmd-hello, .eyebrow, .hero2-kicker, .setup .card-head em { font-family: var(--font-sans) !important; text-transform: none !important; letter-spacing: 0 !important; }
+.top-meter b, .gen-stat strong, .stat-v, .ps-meter b, .mins-chip, .plan-chip, .score { font-family: var(--font-sans); font-variant-numeric: tabular-nums; font-weight: 650; }
+.tool-ic, .ph .tool-ic { background: var(--panel-warm) !important; color: var(--ink) !important; box-shadow: none !important; border: 1px solid var(--line); }
+.logo-mark { background: var(--ink) !important; color: var(--signal) !important; box-shadow: none !important; border-radius: 7px !important; }
+.ps-new { background: var(--ink) !important; color: #fff !important; box-shadow: none !important; border-radius: 8px !important; filter: none !important; }
+.ps-new:hover { background: var(--accent-hover) !important; }
+.ps-link.on { background: var(--raise); color: var(--ink); box-shadow: 0 0 0 1px var(--line); font-weight: 600; }
+.ps-link.on::before { background: var(--signal); width: 3px; }
+.ps-meter u, .ps-meter u.alt, .setup-bar i { background: var(--ink) !important; }
+.pro-side { background: var(--panel-warm); }
+.app-top { background: transparent; }
+.top-avatar { background: var(--ink) !important; color: #fff !important; }
+.lnk { color: var(--ink); font-weight: 600; }
+
+/* buttons: ink primary, quiet outline, red danger */
+.btn-primary, .btn-purple { background: var(--ink) !important; color: #fff !important; border: 1px solid var(--ink) !important; }
+.btn-primary:hover:not(:disabled), .btn-purple:hover:not(:disabled) { background: var(--accent-hover) !important; }
+.btn-primary:disabled, .btn-purple:disabled { opacity: .4; cursor: not-allowed; }
+.btn-outline { background: var(--raise); border: 1px solid var(--line-strong); color: var(--ink); }
+.btn-outline:hover:not(:disabled), .btn-ghost:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
+.btn-outline:disabled { opacity: .45; cursor: not-allowed; }
+.btn-danger { background: var(--danger); color: #fff; border: 1px solid var(--danger); }
+.btn { border-radius: 7px !important; font-weight: 600; }
+.btn.xs { padding: 4px 9px; font-size: 12px; gap: 6px; }
+.input { background: var(--raise); border-color: var(--line-strong); border-radius: 7px; font-weight: 450; }
+.input:focus { border-color: var(--ink); outline: none; }
+.field-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding: 0; }
+.toast { background: var(--ink); color: #fff; font-weight: 550; border-radius: 8px; }
+kbd { font: 500 11px/1 var(--font-mono); padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--muted); }
+
+/* v4: sentence-case sans labels everywhere (no mono caps); mono stays for timecodes and shortcuts */
+.set-label, .gx-label, .nav-group, .gen-opt-label, .status, .ps-label, .gen-chart-col span, .quota-chip em {
+  font: 600 12.5px/1.3 var(--font-sans) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--muted) !important;
+}
+.gx-seg button, .gh-cost, .cmd-kind, .clip-src, .gen-single .gen-kind, .audience-icon, .feature-icon {
+  font-family: var(--font-sans) !important; font-variant-numeric: tabular-nums; letter-spacing: 0 !important;
+}
+.nav-group { margin: 8px 0 10px; }

@@ -10,7 +10,7 @@ A self-hosted, free, open-source pipeline that turns an uploaded long video into
 | Speaker-centered 9:16 crop | OpenCV face detection |
 | Captions, watermark, encode | FFmpeg (ASS subtitles, libx264) |
 
-The worker polls Supabase for `jobs` with `kind = 'clipping'` and claims one at a time
+The worker polls Supabase for `jobs` with `kind` in `clipping`, `clip_render` (re-render one edited clip) or `generation` and claims one at a time
 (`claim_clipping_job`, `FOR UPDATE SKIP LOCKED`). It reports progress to `jobs` and `videos`,
 writes clips to the private `outputs` bucket and the `clips` table, then keeps the reserved
 minutes (`clip_minutes_settle`) or returns them (`clip_minutes_release`). Failed jobs retry up to
@@ -72,3 +72,11 @@ Use `WHISPER_MODEL=base` for faster, slightly less accurate transcripts.
 ```bash
 pip install pytest && PYTHONPATH=. pytest tests
 ```
+
+## Clip re-renders (`clip_render`)
+
+Queued by the `clips-render` Edge Function when a user edits a clip. The job reads the original source and the
+`transcript.json` saved by the clipping job, renders with the chosen caption style (`caption_styles.json`), format
+and framing, swaps the clip's file and deletes the old one. On failure the clip is left untouched. No minutes are charged.
+
+PyAV is pinned (`av==16.0.1`): faster-whisper 1.1.1 crashes on newer PyAV.

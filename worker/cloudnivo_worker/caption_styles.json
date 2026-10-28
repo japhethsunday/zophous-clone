@@ -1,0 +1,21 @@
+{
+  "_note": "Single source of truth for caption looks. Read by the worker (ASS burn-in) and the web editor (live preview). Colours are #RRGGBB; size is in px on a 1080-wide frame.",
+  "styles": [
+    { "id": "bold", "label": "Bold", "description": "Big uppercase words, the spoken word in yellow",
+      "size": 72, "uppercase": true, "words": 3, "color": "#FFFFFF", "highlight": "#FFD23F", "outline": "#101010", "outlineWidth": 6, "box": null, "position": 0.27 },
+    { "id": "clean", "label": "Clean", "description": "Sentence case, no highlight, soft shadow",
+      "size": 56, "uppercase": false, "words": 6, "color": "#FFFFFF", "highlight": null, "outline": "#000000", "outlineWidth": 2, "box": null, "position": 0.22 },
+    { "id": "boxed", "label": "Boxed", "description": "White text on a dark box, easy to read on busy footage",
+      "size": 58, "uppercase": false, "words": 4, "color": "#FFFFFF", "highlight": "#FFD23F", "outline": null, "outlineWidth": 0, "box": "#000000", "position": 0.22 },
+    { "id": "pop", "label": "Pop", "description": "One word at a time, centred, for fast edits",
+      "size": 96, "uppercase": true, "words": 1, "color": "#FFFFFF", "highlight": "#FFD23F", "outline": "#101010", "outlineWidth": 8, "box": null, "position": 0.5 },
+    { "id": "none", "label": "No captions", "description": "Keep the footage clean",
+      "size": 0, "uppercase": false, "words": 0, "color": "#FFFFFF", "highlight": null, "outline": null, "outlineWidth": 0, "box": null, "position": 0 }
+  ],
+  "aspects": [
+    { "id": "9:16", "label": "Vertical 9:16", "width": 1080, "height": 1920 },
+    { "id": "1:1", "label": "Square 1:1", "width": 1080, "height": 1080 },
+    { "id": "4:5", "label": "Portrait 4:5", "width": 1080, "height": 1350 },
+    { "id": "16:9", "label": "Wide 16:9", "width": 1920, "height": 1080 }
+  ]
+}
