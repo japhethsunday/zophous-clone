@@ -10,6 +10,7 @@ Runs on shared free GPUs, so there is a daily quota and sometimes a queue. Set H
 from __future__ import annotations
 
 import os
+import logging
 import shutil
 from pathlib import Path
 
@@ -21,6 +22,9 @@ SIZES = {"9:16": (576, 1024), "16:9": (1024, 576), "1:1": (768, 768)}
 
 class QuotaError(RuntimeError):
     """Free GPU quota used up for now; worth retrying later."""
+
+
+log = logging.getLogger("cloudnivo.generate")
 
 
 def _client(space: str):
@@ -45,6 +49,13 @@ def _wrap(e: Exception) -> Exception:
 
 
 def make_image(prompt: str, aspect: str, dest_dir: str) -> str:
+    # Cloudflare Workers AI first when configured: free daily quota, no shared-GPU queue.
+    from . import cloudflare_ai
+    if cloudflare_ai.enabled():
+        try:
+            return cloudflare_ai.make_image("flux-schnell-cf", prompt, aspect, dest_dir)
+        except Exception:  # noqa: BLE001
+            log.warning("Cloudflare image failed, falling back to Hugging Face", exc_info=True)
     w, h = SIZES.get(aspect, SIZES["9:16"])
     try:
         res = _client(IMAGE_SPACE).predict(prompt, 0, True, w, h, 4, api_name="/infer")
