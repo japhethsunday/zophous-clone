@@ -150,24 +150,6 @@ const DNA_POOL: Omit<DnaPattern, 'id' | 'unlocked'>[] = [
   { category: 'visual', label: 'B-roll cutaways', score: 52 },
 ];
 
-const CAMPAIGNS = [
-  {
-    kind: 'CLIPPING · TIKTOK',
-    brand: '@cloudnivo',
-    title: 'Clip the podcast',
-    rate: '$1,000 per 1M views',
-    budget: '$500',
-    paid: '$0',
-  },
-  {
-    kind: 'UGC · TIKTOK',
-    brand: 'Cloudnivo UGC',
-    title: 'Show how you create',
-    rate: '$1,500 per 1M views',
-    budget: '$2,000',
-    paid: '$0',
-  },
-];
 
 const PLATFORMS = ['TikTok', 'Instagram', 'YouTube', 'Twitch', 'X', 'Kick', 'Facebook'];
 const FONTS = ['space grotesk', 'montserrat', 'inter', 'roboto'];
@@ -182,7 +164,6 @@ type Page =
   | 'brand'
   | 'dna'
   | 'analytics'
-  | 'campaigns'
   | 'billing'
   | 'settings';
 
@@ -214,22 +195,6 @@ function ScoreBadge({ score }: { score: number }) {
   return <span className={`score-badge ${cls}`}>{gradeOf(score)}</span>;
 }
 
-function UsageBar({ used, total, label }: { used: number; total: number; label: string }) {
-  const pct = total === 0 ? 100 : Math.min(100, Math.round((used / total) * 100));
-  return (
-    <div className="usage">
-      <div className="usage-head">
-        <span>{label}</span>
-        <em>
-          {used} / {total}
-        </em>
-      </div>
-      <div className="sp-track">
-        <div className="sp-fill" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
 /* ---------------- clip cards ---------------- */
 
@@ -981,7 +946,7 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
-  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'posts', 'brand', 'dna', 'analytics', 'campaigns', 'billing', 'settings'];
+  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'posts', 'brand', 'dna', 'analytics', 'billing', 'settings'];
   const pageFromHash = (): Page => {
     const m = location.hash.match(/^#\/app\/([a-z]+)$/);
     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
@@ -1310,7 +1275,6 @@ export default function AppShell() {
               ['brand', 'Brand', 'diamond'],
               ['dna', 'DNA Profile', 'activity'],
               ['analytics', 'Analytics', 'chart'],
-              ['campaigns', 'Campaigns', 'megaphone'],
             ] as const
           ).map(([id, label, icon]) => (
             <button key={id} className={`side-link${page === id ? ' on' : ''}`} onClick={() => setPage(id)}>
@@ -1471,58 +1435,6 @@ export default function AppShell() {
           />
         )}
 
-        {page === 'campaigns' && (
-          <div className="page-pad">
-            <div className="page-head-row">
-              <div>
-                <h2 className="app-h">Campaigns</h2>
-                <p className="app-sub">
-                  Get paid per million views for videos you post on your own account.
-                </p>
-              </div>
-              <a
-                className="lnk"
-                onClick={(e) => {
-                  e.preventDefault();
-                  showToast('Earnings open after your first campaign post');
-                }}
-              >
-                Your earnings
-              </a>
-            </div>
-            <div className="campaign-grid">
-              {CAMPAIGNS.map((c) => (
-                <div className="campaign-card" key={c.title}>
-                  <div className="campaign-art">
-                    <span className="campaign-brand">{c.brand}</span>
-                    <strong>{c.title}</strong>
-                  </div>
-                  <div className="campaign-kind">
-                    {c.kind} <em className="open-chip">Open</em>
-                  </div>
-                  <h3>{c.brand === '@cloudnivo' ? 'Cloudnivo Clipping' : 'Cloudnivo UGC'}</h3>
-                  <div className="campaign-rate">{c.rate}</div>
-                  <div className="campaign-stats">
-                    <div>
-                      <em>Budget left</em>
-                      <strong>{c.budget}</strong>
-                    </div>
-                    <div>
-                      <em>Paid out so far</em>
-                      <strong>{c.paid}</strong>
-                    </div>
-                  </div>
-                  <button
-                    className="btn btn-purple wide"
-                    onClick={() => showToast('Joined! Post clips with the campaign hashtag to earn.')}
-                  >
-                    Join Campaign
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {page === 'billing' && profile && (
           <BillingPage profile={profile} showToast={showToast} refresh={refresh} />
@@ -1633,7 +1545,7 @@ function HomePage({
           <div className="card discord-card">
             <strong>Join the Cloudnivo Discord</strong>
             <p>Support, giveaways, early access &amp; tutorials with other creators.</p>
-            <button className="btn btn-outline sm" onClick={() => onNav('campaigns')}>
+            <button className="btn btn-outline sm" onClick={() => { location.hash = '#/community'; }}>
               Join Discord
             </button>
           </div>
@@ -2615,7 +2527,7 @@ function BillingPage({
         desc: 'Everything, together — for teams at volume.',
         flag: 'BEST VALUE',
         chips: [['15', 'TikTok posts / day'], ['1800', 'minutes / mo'], ['30', 'Studio clips / mo']],
-        features: ['Everything in Starter', 'Priority Support', 'Campaign payouts', 'API access (soon)'],
+        features: ['Everything in Starter', 'Priority Support', 'API access (soon)'],
       },
     ],
   };

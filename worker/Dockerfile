@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir --retries 10 --timeout 120 -r requirements-extra.
 
 # Kokoro voiceover model (int8, ~114 MB) + voice pack (~28 MB). Apache-2.0 weights.
 RUN mkdir -p /app/models/kokoro && cd /app/models/kokoro \
- && python -c "import urllib.request as u; b='https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/'; [u.urlretrieve(b+f, f) for f in ('kokoro-v1.0.int8.onnx', 'voices-v1.0.bin')]"
+ && python -c "import urllib.request as u; b='https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/'; [u.urlretrieve(b+f, f) for f in ('kokoro-v1.0.int8.onnx', 'voices-v1.0.bin')]"
 ENV KOKORO_DIR=/app/models/kokoro
 
 COPY cloudnivo_worker ./cloudnivo_worker
