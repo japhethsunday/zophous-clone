@@ -1,5 +1,6 @@
-# Deploys the web app to Cloudflare Pages on every push (main = production, other branches = previews).
-# Needs two repository secrets: CLOUDFLARE_API_TOKEN (permission "Cloudflare Pages: Edit")
+# Deploys the web app to Cloudflare (Workers static assets, the successor to Pages) on every push.
+# main = production; other branches upload a preview version.
+# Needs two repository secrets: CLOUDFLARE_API_TOKEN (permission "Workers Scripts: Edit")
 # and CLOUDFLARE_ACCOUNT_ID. Vercel keeps deploying in parallel until DNS is switched.
 name: Cloudflare Pages
 
@@ -27,13 +28,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx vitest run
-      - name: Create the Pages project on first run
+      - name: Deploy (production on main, preview version elsewhere)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler@4 pages project create cloudnivo --production-branch main || true
-      - name: Deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler@4 pages deploy dist --project-name cloudnivo --branch "${GITHUB_REF_NAME}"
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then npx wrangler@4 deploy
+          else npx wrangler@4 versions upload --preview-alias "$(echo "${GITHUB_REF_NAME}" | tr -c 'a-z0-9-' '-' | cut -c1-40)"; fi
