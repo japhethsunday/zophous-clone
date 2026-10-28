@@ -960,6 +960,15 @@ export default function AppShell() {
   const [session, setSession] = useState<boolean | null>(null);
   const [page, setPage] = useState<Page>(pageFromHash);
   const [menu, setMenu] = useState<null | 'more' | 'account'>(null);
+  // Close the top-bar menus on any outside click or Escape.
+  useEffect(() => {
+    if (!menu) return;
+    const onDown = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest('.top-menu')) setMenu(null); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(null); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [menu]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [clips, setClips] = useState<Clip[]>([]);
@@ -1254,7 +1263,7 @@ export default function AppShell() {
   if (!session) return <SigninGate />;
 
   return (
-    <div className={`shell topnav${page === 'gen' ? ' gen-mode' : ''}`} onClick={(e) => { if (menu && !(e.target as HTMLElement).closest('.top-menu')) setMenu(null); }}>
+    <div className={`shell topnav${page === 'gen' ? ' gen-mode' : ''}`}>
       <header className="topbar">
         <a className="logo top-logo" href="#/app/home" onClick={(e) => { e.preventDefault(); setPage('home'); }}>
           <span className="logo-mark">C</span> <span className="top-logo-text">Cloudnivo</span>
