@@ -98,3 +98,10 @@ With them set, the worker uses (free tier: 10,000 Neurons/day):
 
 Every call falls back to the local models when Cloudflare is not configured, fails or the daily allowance runs out.
 Override models with `CF_WHISPER_MODEL`, `CF_TEXT_MODEL`.
+
+## Website hosting (Cloudflare)
+
+cloudnivo.org is served by the `cloudnivo` Cloudflare Worker (static assets from `dist/`, config in `wrangler.jsonc`).
+Deploys come from Cloudflare Workers Builds, connected to this GitHub repo: every push to `main` runs
+`npm run build` then `npx wrangler deploy`; other branches get preview versions.
+Manual deploy: `npm run build && npx wrangler deploy` (needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`).
