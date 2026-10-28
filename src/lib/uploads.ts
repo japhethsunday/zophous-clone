@@ -38,15 +38,48 @@ export function safeObjectName(raw: string): string {
   return `${base}.${ext}`;
 }
 
+/** PUT a file to a signed upload URL with progress events (fetch has no upload progress). */
+function putWithProgress(url: string, file: File, onProgress: (fraction: number) => void, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('content-type', file.type);
+    xhr.setRequestHeader('x-upsert', 'false');
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      let msg = `Upload failed (${xhr.status}).`;
+      try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* keep default */ }
+      if (xhr.status === 413) msg = 'The file is larger than storage allows. Try a shorter or more compressed video.';
+      reject(new Error(msg));
+    };
+    xhr.onerror = () => reject(new Error('Upload failed: the connection dropped. Check your network and try again.'));
+    xhr.onabort = () => reject(new DOMException('Upload cancelled', 'AbortError'));
+    signal?.addEventListener('abort', () => xhr.abort());
+    xhr.send(file);
+  });
+}
+
 /** Upload a file to sources/<user>/<uuid>-<name> and record it in `assets`. */
-export async function uploadSource(file: File, plan: 'free' | 'starter' | 'pro') {
+export async function uploadSource(
+  file: File,
+  plan: 'free' | 'starter' | 'pro',
+  onProgress?: (fraction: number) => void,
+  signal?: AbortSignal,
+) {
   const check = checkUpload(file, plan);
   if (!check.ok) throw new Error(check.reason);
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) throw new Error('Sign in first.');
   const path = `${u.user.id}/${crypto.randomUUID()}-${safeObjectName(file.name)}`;
-  const { error } = await supabase.storage.from('sources').upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw new Error(error.message);
+  if (onProgress) {
+    const { data: signed, error: sErr } = await supabase.storage.from('sources').createSignedUploadUrl(path);
+    if (sErr || !signed) throw new Error(sErr?.message ?? 'Could not start the upload.');
+    await putWithProgress(signed.signedUrl, file, onProgress, signal);
+  } else {
+    const { error } = await supabase.storage.from('sources').upload(path, file, { contentType: file.type, upsert: false });
+    if (error) throw new Error(error.message);
+  }
   const { data: asset, error: aErr } = await supabase
     .from('assets')
     .insert({ user_id: u.user.id, bucket: 'sources', path, mime: file.type, bytes: file.size })

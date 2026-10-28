@@ -1,4 +1,23 @@
-# Cloudnivo design system (v3)
+# Cloudnivo design system (v4, "cutting room")
+
+v4 replaces the violet v3 look. It is the last layer in `src/style.css`; the clip screens use `src/clips/clips.css`. Background and decisions: `docs/PROGRESS.md` §3.
+
+| Token | Value | Use |
+|---|---|---|
+| `--ink` | #15171C | Text, primary buttons, focus outline |
+| `--signal` | #FFD23F | Only for playing, selected or in range. It is the caption highlight colour in renders |
+| `--stage` | #1B1D22 | Only behind video (editor stage, thumbnails) |
+| `--bg` / `--raise` | #F3F4F6 / #FFFFFF | Canvas / panels |
+| `--muted` / `--faint` | #4A4F5C / #636977 | Secondary text (≥ 4.8:1 on the canvas) |
+| `--danger` | #C8333A | Errors and delete |
+| Type | Schibsted Grotesk; JetBrains Mono only for timecodes and `kbd` | |
+
+Rules: one ink primary button per view; labels are sentence case; focus is a 2px ink outline plus a yellow halo; captions in the preview come from `worker/cloudnivo_worker/caption_styles.json`, the same file the renderer reads.
+
+---
+
+## Previous version (v3), kept for reference
+
 
 How the app should look and behave. The CSS lives in `src/style.css`. The newest layer, "design system v3", is at the end of that file.
 

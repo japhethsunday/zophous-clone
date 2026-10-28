@@ -78,14 +78,23 @@ def _face_center_x(src: str, start: float, end: float, samples: int) -> float:
     return statistics.median(xs) if xs else 0.5
 
 
-def crop_filter(width: int, height: int, center_x: float) -> str:
-    """Static 9:16 crop around center_x, then scale to 1080x1920."""
-    target_w = int(height * 9 / 16) // 2 * 2
-    if target_w >= width:  # already narrow: pad instead of crop
-        return "scale=1080:-2,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black"
+ASPECTS = {"9:16": (1080, 1920), "1:1": (1080, 1080), "4:5": (1080, 1350), "16:9": (1920, 1080)}
+
+
+def crop_filter(width: int, height: int, center_x: float, aspect: str = "9:16") -> str:
+    """Crop the source to `aspect` around center_x (0-1), then scale to the output size.
+
+    A source narrower than the target ratio is letterboxed instead of cropped.
+    """
+    out_w, out_h = ASPECTS.get(aspect, ASPECTS["9:16"])
+    ratio = out_w / out_h
+    target_w = int(height * ratio) // 2 * 2
+    if target_w >= width:  # source is as narrow as the target or narrower: fit and pad
+        return (f"scale={out_w}:{out_h}:force_original_aspect_ratio=decrease,"
+                f"pad={out_w}:{out_h}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1")
     x = int(center_x * width - target_w / 2)
     x = max(0, min(width - target_w, x)) // 2 * 2
-    return f"crop={target_w}:{height}:{x}:0,scale=1080:1920"
+    return f"crop={target_w}:{height}:{x}:0,scale={out_w}:{out_h},setsar=1"
 
 
 def _ass_time(t: float) -> str:
@@ -101,11 +110,16 @@ def _escape(text: str) -> str:
 
 
 def caption_groups(words: list[Word], per_line: int = 3, max_chars: int = 16) -> list[list[Word]]:
-    """Up to `per_line` words per caption, but never more than ~max_chars, so lines fit 9:16."""
+    """Up to `per_line` words per caption, but never more than ~max_chars, so lines fit the frame.
+
+    Mirrored in src/clips/captions.ts (groupWords) so the editor preview matches the render.
+    """
     groups: list[list[Word]] = []
     cur: list[Word] = []
     for w in words:
         text = w.text.strip()
+        if not text:
+            continue
         width = sum(len(x.text.strip()) + 1 for x in cur) + len(text)
         if cur and (len(cur) >= per_line or width > max_chars):
             groups.append(cur)
@@ -116,38 +130,65 @@ def caption_groups(words: list[Word], per_line: int = 3, max_chars: int = 16) ->
     return groups
 
 
+_STYLES_FILE = Path(__file__).with_name("caption_styles.json")
+CAPTION_STYLES = {s["id"]: s for s in json.loads(_STYLES_FILE.read_text())["styles"]}
+
+
+def _ass_color(hex_rgb: str | None, alpha: int = 0) -> str:
+    """#RRGGBB -> &HAABBGGRR (ASS uses BGR and inverted alpha)."""
+    h = (hex_rgb or "#000000").lstrip("#")
+    return f"&H{alpha:02X}{h[4:6]}{h[2:4]}{h[0:2]}".upper()
+
+
 def write_ass(
-    words: list[Word], clip_start: float, dest: str, per_line: int = 3,
-    watermark: bool = False, duration: float = 0.0,
+    words: list[Word], clip_start: float, dest: str, per_line: int | None = None,
+    watermark: bool = False, duration: float = 0.0, style: str = "bold", aspect: str = "9:16",
 ) -> None:
-    """Bold centered captions, a few words at a time, with the spoken word highlighted.
+    """Captions a few words at a time, with the spoken word highlighted (per style).
 
     The free-plan watermark is drawn here too (libass), so rendering needs no drawtext/fontconfig.
     """
-    head = """[Script Info]
+    st = CAPTION_STYLES.get(style, CAPTION_STYLES["bold"])
+    out_w, out_h = ASPECTS.get(aspect, ASPECTS["9:16"])
+    scale = out_w / 1080
+    size = round(st["size"] * scale)
+    border_style = 3 if st["box"] else 1
+    outline_col = _ass_color(st["box"] or st["outline"], 0x30 if st["box"] else 0)
+    back_col = _ass_color(st["box"] or "#000000", 0x30 if st["box"] else 0x64)
+    outline_w = round((14 if st["box"] else st["outlineWidth"]) * scale)
+    margin_v = max(0, round(st["position"] * out_h - size / 2))
+    head = f"""[Script Info]
 ScriptType: v4.00+
-PlayResX: 1080
-PlayResY: 1920
-WrapStyle: 2
+PlayResX: {out_w}
+PlayResY: {out_h}
+WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,DejaVu Sans,72,&H00FFFFFF,&H00FFFFFF,&H00101010,&H64000000,1,0,0,0,100,100,0,0,1,6,2,2,80,80,520,1
-Style: Wm,DejaVu Sans,40,&H60FFFFFF,&H60FFFFFF,&H90000000,&H00000000,1,0,0,0,100,100,2,0,1,2,0,9,40,40,60,1
+Style: Cap,DejaVu Sans,{size},{_ass_color(st["color"])},{_ass_color(st["color"])},{outline_col},{back_col},1,0,0,0,100,100,0,0,{border_style},{outline_w},{0 if st["box"] else 2},2,{round(80 * scale)},{round(80 * scale)},{margin_v},1
+Style: Wm,DejaVu Sans,{round(40 * scale)},&H60FFFFFF,&H60FFFFFF,&H90000000,&H00000000,1,0,0,0,100,100,2,0,1,2,0,9,40,40,60,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     lines = []
-    for group in caption_groups(words, per_line):
-        for k, w in enumerate(group):
-            parts = []
-            for j, g in enumerate(group):
-                txt = _escape(g.text.strip().upper())
-                parts.append("{\\c&H00F5D04A&}" + txt + "{\\c&H00FFFFFF&}" if j == k else txt)
-            start = w.start - clip_start
-            end = (group[k + 1].start if k + 1 < len(group) else w.end) - clip_start
-            lines.append(f"Dialogue: 0,{_ass_time(start)},{_ass_time(max(end, start + 0.05))},Cap,,0,0,0,,{' '.join(parts)}")
+    n = per_line or st["words"]
+    if n > 0:
+        hi = _ass_color(st["highlight"]) if st["highlight"] else None
+        base = _ass_color(st["color"])
+        max_chars = 16 if n <= 3 else 30
+        for group in caption_groups(words, n, max_chars if n > 1 else 40):
+            for k, w in enumerate(group):
+                parts = []
+                for j, g in enumerate(group):
+                    txt = _escape(g.text.strip())
+                    txt = txt.upper() if st["uppercase"] else txt
+                    parts.append("{\\c" + hi + "&}" + txt + "{\\c" + base + "&}" if (hi and j == k) else txt)
+                start = w.start - clip_start
+                end = (group[k + 1].start if k + 1 < len(group) else w.end) - clip_start
+                if end <= 0:
+                    continue
+                lines.append(f"Dialogue: 0,{_ass_time(start)},{_ass_time(max(end, start + 0.05))},Cap,,0,0,0,,{' '.join(parts)}")
     if watermark and duration > 0:
         lines.append(f"Dialogue: 1,{_ass_time(0)},{_ass_time(duration)},Wm,,0,0,0,,CLOUDNIVO")
     Path(dest).write_text(head + "\n".join(lines) + "\n", encoding="utf-8")

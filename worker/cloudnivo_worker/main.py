@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from .health import STATE, serve_in_background
-from .pipeline import process
+from .pipeline import process, render_edit
 from .supa import Supa
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(message)s")
@@ -19,9 +19,9 @@ log = logging.getLogger("cloudnivo-worker")
 WORKER_ID = os.environ.get("WORKER_ID") or socket.gethostname()
 IDLE_SLEEP = float(os.environ.get("IDLE_SLEEP", "5"))
 # Which job kinds this worker takes. The PC worker does both; Modal only clips.
-WORKER_KINDS = [k.strip() for k in os.environ.get("WORKER_KINDS", "clipping,generation").split(",") if k.strip()]
+WORKER_KINDS = [k.strip() for k in os.environ.get("WORKER_KINDS", "clipping,clip_render,generation").split(",") if k.strip()]
 MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "5"))
-PERMANENT = {"video_too_short", "no_audio_track", "no_speech_found", "no video stream"}
+PERMANENT = {"video_too_short", "no_audio_track", "no_speech_found", "no video stream", "clip_too_short", "bad_aspect", "clip_not_found"}
 
 _stop = False
 
@@ -100,9 +100,69 @@ def run_generation_job(db: Supa, job: dict) -> None:
     log.info("generation job %s done", jid)
 
 
+def run_render_job(db: Supa, job: dict) -> None:
+    """Re-render one edited clip. Free (no minutes): the source was already paid for when clipped."""
+    jid, cid = job["id"], job.get("ref_id")
+    log.info("render job %s claimed for clip %s (attempt %s)", jid, cid, job.get("attempts"))
+    existing = db.select("clips", f"id=eq.{cid}&select=id,clip_path,thumb_path")
+    if not existing:
+        db.update("jobs", f"id=eq.{jid}", {"status": "failed", "error": "clip_not_found", "completed_at": now()})
+        return
+
+    def progress(pct: int, stage: str) -> None:
+        db.update("jobs", f"id=eq.{jid}", {"progress": pct, "output": {"stage": stage}})
+
+    try:
+        out = render_edit(
+            job,
+            download=lambda path, dest: db.download("sources", path, dest),
+            try_download=lambda path, dest: db.try_download("outputs", path, dest),
+            upload=lambda file, path, mime: db.upload("outputs", path, file, mime),
+            progress=progress,
+        )
+    except Exception as e:  # noqa: BLE001
+        msg = str(e)[:500]
+        retry = msg not in PERMANENT and int(job.get("attempts", 1)) < MAX_ATTEMPTS
+        log.exception("render job %s failed (%s)", jid, "will retry" if retry else "final")
+        if retry:
+            db.update("jobs", f"id=eq.{jid}", {
+                "status": "queued", "error": msg,
+                "next_poll_at": (datetime.now(timezone.utc) + timedelta(minutes=1)).isoformat(),
+            })
+        else:
+            db.update("jobs", f"id=eq.{jid}", {"status": "failed", "error": msg, "completed_at": now()})
+        return  # the previous render stays in place, so a failure never loses the user's clip
+
+    inp = job["input"]
+    values = {
+        "clip_path": out["clip_path"], "thumb_path": out["thumb_path"],
+        "start_seconds": out["start_seconds"], "end_seconds": out["end_seconds"],
+        "caption_style": out["caption_style"], "watermarked": bool(inp.get("watermark", True)),
+    }
+    if inp.get("title"):
+        values["title"] = str(inp["title"])[:200]
+    if out.get("transcript"):
+        values["transcript"] = out["transcript"]
+    db.update("clips", f"id=eq.{cid}", values)
+    db.insert("assets", {"user_id": job["user_id"], "bucket": "outputs", "path": out["clip_path"], "mime": "video/mp4",
+                         "bytes": out["bytes"], "origin_job_id": jid}, upsert_on="bucket,path")
+    db.update("clip_edits", f"media_kind=eq.clip&media_id=eq.{cid}", {"rendered_at": now()})
+    old = [p for p in (existing[0].get("clip_path"), existing[0].get("thumb_path")) if p and p not in (out["clip_path"], out["thumb_path"])]
+    try:
+        db.remove("outputs", old)
+    except Exception:  # noqa: BLE001 - an orphaned old file is harmless
+        log.warning("could not remove old render files for clip %s", cid)
+    db.update("jobs", f"id=eq.{jid}", {"status": "succeeded", "progress": 100, "completed_at": now(),
+                                       "output": {"stage": "done", **out}})
+    log.info("render job %s done", jid)
+
+
 def run_job(db: Supa, job: dict) -> None:
     if job.get("kind") == "generation":
         run_generation_job(db, job)
+        return
+    if job.get("kind") == "clip_render":
+        run_render_job(db, job)
         return
     jid, vid = job["id"], job.get("ref_id")
     log.info("job %s claimed (attempt %s)", jid, job.get("attempts"))

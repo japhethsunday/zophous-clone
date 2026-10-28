@@ -78,6 +78,7 @@ export type Clip = {
   thumb_path?: string | null;
   clip_url?: string | null;
   transcript?: string | null;
+  job_id?: string | null;
   platform: string | null;
   posted_at: string | null;
   created_at: string;

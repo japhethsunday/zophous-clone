@@ -62,3 +62,19 @@ class Supa:
                 headers={"Content-Type": content_type, "x-upsert": "true"},
             )
         r.raise_for_status()
+
+    def try_download(self, bucket: str, path: str, dest: str) -> bool:
+        """Download if the object exists; False on 400/404 instead of raising."""
+        try:
+            self.download(bucket, path, dest)
+            return True
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code in (400, 404):
+                return False
+            raise
+
+    def remove(self, bucket: str, paths: list[str]) -> None:
+        if not paths:
+            return
+        r = self.s.delete(f"{self.url}/storage/v1/object/{bucket}", json={"prefixes": paths}, timeout=self.timeout)
+        r.raise_for_status()
