@@ -94,6 +94,23 @@ def run_job(db: Supa, job: dict) -> None:
     log.info("job %s done: %d clips", jid, len(rows))
 
 
+def drain(max_seconds: float = 3300) -> int:
+    """Process queued jobs until the queue is empty or time runs out. Used by serverless hosts (Modal)."""
+    db = Supa()
+    deadline = time.monotonic() + max_seconds
+    done = 0
+    while time.monotonic() < deadline:
+        jobs = db.rpc("claim_clipping_job", {"p_worker": WORKER_ID}) or []
+        if not jobs:
+            break
+        try:
+            run_job(db, jobs[0])
+        except Exception:  # noqa: BLE001
+            log.exception("job bookkeeping failed; it will be re-queued after 30 minutes")
+        done += 1
+    return done
+
+
 def main() -> None:
     signal.signal(signal.SIGTERM, _handle_stop)
     signal.signal(signal.SIGINT, _handle_stop)
