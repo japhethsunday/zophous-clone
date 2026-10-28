@@ -62,7 +62,8 @@ No database migration was needed: `jobs.kind` is free text and `clip_edits` alre
 
 ## 6. Not deployed / not verified
 
-- **`clips-render` Edge Function is not deployed** and **the worker update is not published** (the Hugging Face Space needs the owner's token). Until both ship, "Render changes" returns an error toast; nothing else breaks.
+- `clips-render` Edge Function **deployed** 2026-10-28 (v1, verify_jwt on). Checked: CORS preflight 200 (boots), unsigned POST 401. Not yet exercised with a real signed-in edit.
+- **The worker update is not published** (the Hugging Face Space needs the owner's token). Until it is, render jobs stay queued ("Waiting for a worker"); the old worker ignores the `clip_render` kind, and nothing else breaks.
 - Not tested against the live Supabase project or with a real signed-in account.
 - Storage file-size limit on the Supabase project is unknown; uploads above it now show a clear 413 message.
 - Live preview framing in "follow face" mode shows the frame centre; the face position is only known to the worker.
@@ -73,7 +74,7 @@ No database migration was needed: `jobs.kind` is free text and `clip_edits` alre
 
 ## 7. Remaining work
 
-1. Deploy `clips-render`, republish the worker (`bash worker/space/publish.sh recksdev/cloudnivo-worker`), then run one real edit on production.
+1. Republish the worker (`bash worker/space/publish.sh recksdev/cloudnivo-worker`), then run one real edit on production.
 2. Return the detected face position from clipping into `clip_edits` so the live preview frames like the render.
 3. Retry for failed projects using the stored source.
 4. Batch actions (render all, download all as zip).
