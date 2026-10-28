@@ -1,14 +1,24 @@
-// Cloudflare Workers static assets (the successor to Cloudflare Pages).
-// Deploy: npx wrangler deploy (builds first, see "build")
+// Cloudflare Worker: static web app (dist/) + the Studio API (edge/index.ts).
+// Deploys come from Workers Builds on every push to main (npx wrangler deploy builds first).
 {
   "$schema": "https://unpkg.com/wrangler@4/config-schema.json",
   "name": "cloudnivo",
+  "main": "edge/index.ts",
   "compatibility_date": "2026-10-23",
-  // Always build before deploy/upload, so Workers Builds works even with an empty build command.
   "build": { "command": "npm run build" },
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "ai": { "binding": "AI" },
+  "kv_namespaces": [{ "binding": "USAGE", "id": "deeeaa6828fb4be79f69d96cc36f3d81" }],
+  // Public values (same as the web app's .env); no secrets here.
+  "vars": {
+    "SUPABASE_URL": "https://gapzawavgmsnfuekqudo.supabase.co",
+    "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhcHphd2F2Z21zbmZ1ZWtxdWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NjE2MDYsImV4cCI6MjEwODUzNzYwNn0.6_nDowq7c8Vc0mPUixTd4SmA2UtWi8LLZMMsNBxiZao",
+    "DAILY_IMAGES": "40"
   },
   "observability": { "enabled": true }
 }
