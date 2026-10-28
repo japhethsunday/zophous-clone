@@ -17,8 +17,18 @@ from typing import Callable
 import requests
 
 from . import media
-from .generate import make_image
+from .generate import QuotaError, make_image
 from .moments import Word
+
+# Aurora-style colour pairs for scenes rendered without the free GPU.
+_PALETTES = [("0x5b3df5", "0x22a6d8"), ("0x0e1020", "0x5b3df5"), ("0x7c4dff", "0x0891b2"), ("0x3f22c9", "0xd9468f")]
+
+
+def gradient_still(dest: str, w: int, h: int, idx: int) -> None:
+    a, b = _PALETTES[idx % len(_PALETTES)]
+    media.run([media.FFMPEG, "-y", "-f", "lavfi", "-i",
+               f"gradients=s={w}x{h}:c0={a}:c1={b}:x0=0:y0=0:x1={w}:y1={h}:nb_colors=2:d=1",
+               "-frames:v", "1", dest])
 
 log = logging.getLogger(__name__)
 
@@ -110,9 +120,14 @@ def make_story(inp: dict, tmp: str, progress: Callable[[int, str], None]) -> tup
         progress(20 + int(55 * i / n), f"scene {i + 1} of {n}")
         wav = str(Path(tmp) / f"s{i}.wav")
         dur = speak(sc["narration"], voice, wav)
-        img = make_image(sc["visual"] + ", cinematic, high detail", aspect, tmp)
-        img_fixed = str(Path(tmp) / f"s{i}{Path(img).suffix}")
-        os.replace(img, img_fixed)
+        try:
+            img = make_image(sc["visual"] + ", cinematic, high detail", aspect, tmp)
+            img_fixed = str(Path(tmp) / f"s{i}{Path(img).suffix}")
+            os.replace(img, img_fixed)
+        except QuotaError:
+            # Free GPU quota used up for today: use a CPU-made brand gradient so the story still finishes.
+            img_fixed = str(Path(tmp) / f"s{i}.png")
+            gradient_still(img_fixed, W, H, i)
         seg = str(Path(tmp) / f"s{i}.mp4")
         frames = max(1, int(dur * 30))
         # Slow Ken Burns zoom so stills feel alive.
