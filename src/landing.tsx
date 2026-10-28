@@ -95,11 +95,10 @@ export function SplitHero() {
               onKeyDown={(e) => e.key === 'Enter' && goGen()}
             />
             <button className="btn btn-light" onClick={goGen}>
-              Create →
+              Create
             </button>
           </div>
         </label>
-        <p className="hero2-note">Free plan · No credit card · Cancel anytime</p>
       </div>
       <div className="hero2-visual">
         <PipelinePreview />
@@ -112,7 +111,7 @@ export function SplitHero() {
 
 const STEPS = [
   { n: '01', title: 'Bring a video or an idea', body: 'Upload an MP4, MOV or WebM, or describe the short you want.' },
-  { n: '02', title: 'AI does the heavy lifting', body: 'Transcripts, best moments, vertical framing, captions, voiceover and scenes.' },
+  { n: '02', title: 'Cloudnivo does the cutting', body: 'Transcripts, best moments, vertical framing, captions, voiceover and scenes.' },
   { n: '03', title: 'Download and post', body: 'Every result is saved to your library, ready for TikTok, Reels and Shorts.' },
 ];
 

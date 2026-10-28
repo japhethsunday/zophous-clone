@@ -22,11 +22,10 @@ function Nav() {
         <div className="nav-links">
           <a href="#features">Features</a>
           <a href="#how">How it works</a>
-          <a href="#pricing">Pricing</a>
           <a href="#/about">About</a>
         </div>
         <a className="btn btn-light" href="#/app">
-          Get Started →
+          Get started
         </a>
       </nav>
     </header>
@@ -75,15 +74,15 @@ const FAQS = [
   },
   {
     q: 'How long does it take?',
-    a: 'Most videos are analyzed and clipped in minutes, not hours. Upload, and your captioned, scored clips are ready to download.',
+    a: 'A one-hour video usually takes 5 to 10 minutes. You can close the tab; the clips appear in your library when they are done.',
   },
   {
     q: 'Do I need editing skills?',
-    a: 'None. The AI finds the moments, cuts them, adds captions, and reframes to vertical. You just pick your favorites and post.',
+    a: 'No. Cloudnivo finds the moments, cuts them, adds captions and reframes to vertical. You review the clips and post the ones you like.',
   },
   {
-    q: 'Is there really a free plan?',
-    a: 'Yes. The Free plan gives you 60 clipping minutes every month, with AI clips, captions and hooks. Spend them on one long video or split them across up to three shorter ones (each video uses a minimum of 20 minutes). Clips carry a Cloudnivo watermark, and you can make 1 clip a month watermark-free. No credit card required.',
+    q: 'How many minutes do I get?',
+    a: 'Every account gets a monthly allowance of clipping minutes and generation credits. Both reset on the first of the month. You can see what is left in the top bar of the app.',
   },
 ];
 
@@ -103,100 +102,6 @@ function Faq() {
               <span className="faq-toggle">{open === i ? '−' : '+'}</span>
             </button>
             {open === i && <div className="faq-a">{f.a}</div>}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- pricing ---------- */
-
-const PLANS = [
-  {
-    name: 'Free',
-    tagline: 'Try Cloudnivo on real videos, every month.',
-    price: '$0',
-    per: '/mo',
-    badge: 'Free forever',
-    feats: [
-      '60 clipping minutes a month, across up to 3 videos',
-      'AI clips, captions & hooks',
-      'Engagement heatmap to pick your best window',
-      '1 Workspace',
-      '2 Turbo Downloads a month',
-      'Cloudnivo watermark on clips',
-    ],
-    cta: 'Start for free',
-    featured: false,
-  },
-  {
-    name: 'Creator Starter',
-    tagline: 'Get started clipping long-form videos into shorts.',
-    price: '$15',
-    per: '/mo',
-    badge: '200 minutes / mo',
-    feats: [
-      '200 minutes of video / mo',
-      '3 Studio clips / mo, each with a Director edit',
-      'Watermark-free clips',
-      'Turbo Downloads: clips ready in about 10 seconds',
-      'DNA Profile & analytics (coming soon)',
-      'TikTok & YouTube posting (coming soon)',
-      '1 Workspace · Email support',
-    ],
-    cta: 'Get Creator Starter',
-    featured: false,
-  },
-  {
-    name: 'Creator Pro',
-    tagline: 'More clips from your long-form videos, faster.',
-    price: '$29',
-    per: '/mo',
-    badge: '600 minutes / mo · Most popular',
-    feats: [
-      '600 minutes of video / mo',
-      '3 Studio clips / mo, each with a Director edit',
-      'Watermark-free clips',
-      'Turbo Downloads: clips ready in about 10 seconds',
-      'DNA Profile & analytics (coming soon)',
-      'TikTok & YouTube posting (coming soon)',
-      '3 Workspaces · Priority support',
-    ],
-    cta: 'Get Creator Pro',
-    featured: true,
-  },
-];
-
-function Pricing() {
-  return (
-    <section className="section" id="pricing">
-      <Eyebrow>Pricing</Eyebrow>
-      <h2>
-        Start free, <span className="serif">scale when you're ready</span>
-      </h2>
-      <p className="sub">Free every month. Upgrade only when you need more minutes.</p>
-      <div className="plans">
-        {PLANS.map((p) => (
-          <div className={`plan${p.featured ? ' featured' : ''}`} key={p.name}>
-            {p.featured && <div className="plan-flag">Most popular</div>}
-            <h3>{p.name}</h3>
-            <p className="plan-tag">{p.tagline}</p>
-            <div className="plan-price">
-              <strong>{p.price}</strong>
-              <span>{p.per}</span>
-            </div>
-            <div className="plan-badge">{p.badge}</div>
-            <ul>
-              {p.feats.map((f) => (
-                <li key={f}>
-                  <span className="li-check">✓</span> {f}
-                </li>
-              ))}
-            </ul>
-            <a className={`btn plan-btn${p.featured ? ' btn-purple' : ' btn-outline'}`} href="#top">
-              {p.cta}
-            </a>
           </div>
         ))}
       </div>
@@ -233,7 +138,7 @@ function PromptLibraryTeaser() {
             <h3>{p.t}</h3>
             <p>{p.d}</p>
             <a className="pl-use" href="#/app/gen">
-              Use in studio →
+              Use in studio
             </a>
           </div>
         ))}
@@ -264,11 +169,10 @@ function Cta() {
       <h2>
         Make your next short <span className="serif">today</span>
       </h2>
-      <p className="sub">Upload a video or start from an idea. The free plan needs no credit card.</p>
+      <p className="sub">Upload a video or start from an idea.</p>
       <a className="btn btn-purple big" href="#/app">
-        Start for free
+        Open the studio
       </a>
-      <p className="hero2-note">Free plan · No credit card · Cancel anytime</p>
     </section>
   );
 }
@@ -302,12 +206,12 @@ function AboutPage() {
       <p className="sub">
         Cloudnivo started with a simple obsession: why does creating viral content take so long? We
         built the tool we wished existed. Every creator deserves the same editing power that big
-        studios have. AI should do the grunt work. You should focus on creating.
+        studios have. Software should do the repetitive work so you can focus on making things.
       </p>
       <div className="audience-grid" style={{ marginTop: 40 }}>
         {[
           ['✦ Simplicity First', 'We strip away complexity so creators can focus on what they do best: creating. Every feature earns its place.'],
-          ['⚡ Speed is a Feature', "Waiting kills momentum. We obsess over making Cloudnivo faster at every step, from upload to export."],
+          ['Speed is a feature', "Waiting kills momentum. We obsess over making Cloudnivo faster at every step, from upload to export."],
           ['🤝 Creator-Led', "We build with creators, not for them. Every decision starts with the question: does this make a creator's life easier?"],
           ['🔍 Radical Transparency', 'We share our roadmap, our mistakes, and our wins openly. Trust is built through honesty, not polish.'],
         ].map(([t, d]) => (
@@ -337,7 +241,7 @@ function AboutPage() {
       <div className="dna-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 40 }}>
         {[
           ['Spring 2023', 'The Idea is Born', 'Cloudnivo began as a business plan generator for aspiring entrepreneurs.'],
-          ['Fall 2024', 'Pivot to Clips', 'Manual clip editing ate my podcast hours — so Cloudnivo pivoted to AI clipping.'],
+          ['Fall 2024', 'Pivot to Clips', 'Manual clip editing ate my podcast hours — so Cloudnivo pivoted to automatic clipping.'],
           ['Fall 2025', 'Public Launch', 'Officially launched to the public, and never stopped improving.'],
         ].map(([when, t, d]) => (
           <div className="dna-card" key={t}>
@@ -419,14 +323,14 @@ function ToolPage({ name }: { name: string }) {
       <Eyebrow>{name.replace(/-/g, ' ')}</Eyebrow>
       <h2>{titles[name] ?? name}</h2>
       <p className="sub">
-        Paste a link or upload a video, and the AI picks the moments most likely to hold attention,
+        Paste a link or upload a video. Cloudnivo picks the moments most likely to hold attention,
         cuts them to 9:16, adds captions and a hook, and scores each clip so you know which to post
-        first. You can start on the free plan, no card needed.
+        first.
       </p>
       <div className="dna-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: 44 }}>
         {[
           ['01', 'Paste or upload', 'A YouTube link, or an MP4/MOV up to 3 GB.'],
-          ['02', 'AI picks the window', 'It reads which parts viewers rewatch most. You can drag it.'],
+          ['02', 'Pick the window', 'It reads which parts viewers rewatch most. You can drag it.'],
           ['03', 'Post the winners', 'Vertical clips with captions and hooks, each scored.'],
         ].map(([n, t, d]) => (
           <div className="dna-card" key={n}>
@@ -455,7 +359,6 @@ function Footer() {
         <div className="footer-links">
           <a href="#/about">About</a>
           <a href="#/community">Community</a>
-          <a href="#pricing">Pricing</a>
           <a href="#faq">FAQ</a>
           <a href="#/terms">Terms</a>
           <a href="#/privacy">Privacy</a>
@@ -489,7 +392,6 @@ function Landing() {
         <Bento />
         <PromptLibraryTeaser />
         <WhoFor />
-        <Pricing />
         <Faq />
         <Cta />
       </main>

@@ -170,7 +170,6 @@ type Page =
   | 'brand'
   | 'dna'
   | 'analytics'
-  | 'billing'
   | 'settings';
 
 function SigninGate() {
@@ -182,8 +181,7 @@ function SigninGate() {
         </a>
         <h1 style={{ fontSize: 22 }}>Sign in to your studio</h1>
         <p className="sub left" style={{ margin: '12px 0 22px' }}>
-          Clip long videos, schedule posts, and build your viral DNA. The Free plan gives you 60
-          clipping minutes a month — no credit card required.
+          Clip long videos, generate shorts and schedule posts from one workspace.
         </p>
         <button className="btn btn-purple big" onClick={() => auth.openSignInModal()}>
           Sign in / Create account
@@ -532,7 +530,7 @@ function GenPage({
       return;
     }
     if (creditsLeft < cost) {
-      showToast(`Not enough credits — this render costs ${cost}, you have ${creditsLeft}. Upgrade in Billing.`);
+      showToast(`This render needs ${cost} credits. You have ${creditsLeft}.`);
       return;
     }
     setBusy(true);
@@ -619,11 +617,11 @@ function GenPage({
     <div className="gen-page">
       <div className="page-head-row">
         <div>
-          <h2 className="app-h gen-h">AI Studio</h2>
-          <p className="gen-sub">Generate real video, images and scripts — powered by credits.</p>
+          <h2 className="app-h gen-h">Generate</h2>
+          <p className="gen-sub">Video, images and narrated stories from a prompt.</p>
         </div>
         <span className="gen-credits-pill">
-          ⚡ {creditsLeft} credits left
+          {creditsLeft} credits
         </span>
       </div>
 
@@ -650,9 +648,9 @@ function GenPage({
           <i className="gen-delta up">video · image</i>
         </div>
         <div className="gen-stat">
-          <em>Plan</em>
-          <strong className="gen-stat-plan">{PLANS[profile.plan].name}</strong>
-          <i className="gen-delta">{PLANS[profile.plan].credits} credits / mo</i>
+          <em>Minutes</em>
+          <strong>{profile.minutes_limit - profile.minutes_used}</strong>
+          <i className="gen-delta">clipping left</i>
         </div>
       </div>
 
@@ -949,7 +947,7 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
-  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'posts', 'brand', 'dna', 'analytics', 'billing', 'settings'];
+  const PAGES: Page[] = ['home', 'clips', 'studio', 'gen', 'posts', 'brand', 'dna', 'analytics', 'settings'];
   const pageFromHash = (): Page => {
     const m = location.hash.match(/^#\/app\/([a-z]+)$/);
     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
@@ -1066,11 +1064,6 @@ export default function AppShell() {
     }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user || !profile) return;
-      if (opts.mode === 'studio' && profile.plan === 'free') {
-        showToast('Studio clips are part of paid plans — upgrade in Billing');
-        setPage('billing');
-        return;
-      }
       const { data, error } = await supabase
         .from('videos')
         .insert({
@@ -1145,11 +1138,6 @@ export default function AppShell() {
     async (opts: { url: string; look: string; style: string; instructions: string; minutes: number; autoEdit: boolean }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user || !profile) return;
-      if (profile.plan === 'free') {
-        showToast('Studio is part of paid plans — upgrade in Billing');
-        setPage('billing');
-        return;
-      }
       const uid = userData.user.id;
       const ws = managers[0]?.id ?? null;
       const { data: job, error } = await supabase
@@ -1257,7 +1245,7 @@ export default function AppShell() {
     await refresh();
   }, [profile, dna.length, markChecklist, refresh, showToast]);
 
-  const isPaid = profile ? profile.plan !== 'free' : false;
+  const isPaid = true;
   const minutesLeft = profile ? profile.minutes_limit - profile.minutes_used : 0;
   const checklist = profile?.checklist_done ?? {};
   const doneCount = ['first_video', 'connected', 'first_post', 'dna'].filter((k) => checklist[k]).length;
@@ -1276,7 +1264,7 @@ export default function AppShell() {
           <span className="logo-mark">C</span>
           <div className="ps-ws">
             <strong>{managers[0]?.name ?? 'My Workspace'}</strong>
-            <span>{profile ? PLANS[profile.plan].name : ''}</span>
+            <span>Workspace</span>
           </div>
           <button
             className="ps-collapse"
@@ -1358,9 +1346,6 @@ export default function AppShell() {
           </button>
           {menu === 'side-account' && (
             <div className="top-pop up" role="menu">
-              <button role="menuitem" onClick={() => { setPage('billing'); setMenu(null); setNavOpen(false); }}>
-                <Ic name="card" size={15} /> Billing &amp; plan
-              </button>
               <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); setNavOpen(false); }}>
                 <Ic name="sliders" size={15} /> Settings
               </button>
@@ -1385,14 +1370,9 @@ export default function AppShell() {
           </button>
           <div className="app-top-right">
             {profile && (
-              <button className="top-meter" onClick={() => setPage('billing')} title="Your monthly allowance">
+              <button className="top-meter" onClick={() => setPage('settings')} title="Usage this month">
                 <span><b>{minutesLeft}</b> min</span>
                 <span><b>{profile.credits_balance}</b> credits</span>
-              </button>
-            )}
-            {profile?.plan === 'free' && (
-              <button className="btn btn-purple sm" onClick={() => setPage('billing')}>
-                <Ic name="zap" size={14} /> Upgrade
               </button>
             )}
             <div className="top-menu">
@@ -1409,12 +1389,9 @@ export default function AppShell() {
                   {profile && (
                     <div className="top-pop-head">
                       <strong>{profile.display_name ?? 'Account'}</strong>
-                      <span>{PLANS[profile.plan].name} · resets {resetLabel()}</span>
+                      <span>Usage resets {resetLabel()}</span>
                     </div>
                   )}
-                  <button role="menuitem" onClick={() => { setPage('billing'); setMenu(null); }}>
-                    <Ic name="card" size={15} /> Billing &amp; plan
-                  </button>
                   <button role="menuitem" onClick={() => { setPage('settings'); setMenu(null); }}>
                     <Ic name="sliders" size={15} /> Settings
                   </button>
@@ -1458,7 +1435,7 @@ export default function AppShell() {
             onCreate={createVideo}
             onUpload={uploadAndClip}
             onPost={setPostClip}
-            onUpgrade={() => setPage('billing')}
+            onUpgrade={() => setPage('settings')}
           />
         )}
 
@@ -1477,17 +1454,7 @@ export default function AppShell() {
 
         {page === 'posts' && (
           <div className="page-pad">
-            {!isPaid ? (
-              <div className="paygate">
-                <h3>Posting is a paid feature</h3>
-                <p>Post and schedule to TikTok and YouTube — up to 15 posts a day, depending on your plan.</p>
-                <button className="btn btn-purple" onClick={() => setPage('billing')}>
-                  Upgrade your plan
-                </button>
-              </div>
-            ) : (
               <PostsList posts={posts} clips={clips} markChecklist={markChecklist} refresh={refresh} />
-            )}
           </div>
         )}
 
@@ -1496,7 +1463,7 @@ export default function AppShell() {
         )}
 
         {page === 'dna' && (
-          <DnaPage dna={dna} profile={profile} onUnlock={unlockDna} onUpgrade={() => setPage('billing')} />
+          <DnaPage dna={dna} profile={profile} onUnlock={unlockDna} onUpgrade={() => setPage('settings')} />
         )}
 
         {page === 'analytics' && profile && (
@@ -1510,9 +1477,6 @@ export default function AppShell() {
         )}
 
 
-        {page === 'billing' && profile && (
-          <BillingPage profile={profile} showToast={showToast} refresh={refresh} />
-        )}
 
         {page === 'settings' && profile && (
           <SettingsPage
@@ -1762,7 +1726,7 @@ function ClipsPage({
             Upload
           </button>
           <span className="mins-chip">{minutesLeft} minutes left</span>
-          <span className="mins-chip">{PLANS[profile.plan].name.toUpperCase()} PLAN</span>
+          
         </div>
         {tab === 'link' ? (
           <div className="form-row">
@@ -1819,15 +1783,7 @@ function ClipsPage({
             Link import shows a sample preview for now. For real clips, download your own video and use Upload.
           </p>
         )}
-        <p className="form-note">
-          {profile.plan === 'free'
-            ? `Free plan: 1 watermark-free clip a month · 1 left · resets ${resetLabel()}. `
-            : `${PLANS[profile.plan].name}: ${minutesLeft} minutes left · resets ${resetLabel()}. `}
-          Posting and scheduling are on paid plans.{' '}
-          <a className="lnk" onClick={(e) => { e.preventDefault(); onUpgrade(); }}>
-            Upgrade
-          </a>
-        </p>
+        <p className="form-note">{minutesLeft} minutes left this month · resets {resetLabel()}</p>
       </div>
 
       <h3 className="app-h3">Your clip sets</h3>
@@ -1848,7 +1804,7 @@ function ClipsPage({
                 {v.status === 'failed' && v.error && <span className="form-note">{friendlyClipError(v.error)}</span>}
                 {vclips.length > 0 && (
                   <button className="btn btn-outline sm" onClick={() => setOpenSet(v.id)}>
-                    Explore →
+                    Explore
                   </button>
                 )}
               </div>
@@ -2015,7 +1971,7 @@ function StudioPage({
         <p className="form-note" style={{ textAlign: 'center' }}>
           Want to test different hooks?{' '}
           <a className="lnk" onClick={(e) => e.preventDefault()}>
-            A/B test your videos →
+            A/B test your videos
           </a>
         </p>
       </div>
@@ -2201,20 +2157,14 @@ function BrandPage({
         note, and adds your intro and outro.
       </p>
       <div className="card gate-strip">
-        <span>Brand library is part of paid plans. · 0 of 50 items</span>
-        <button className="btn btn-outline sm" onClick={() => showToast('Brand library unlocks on paid plans')}>
-          {isPaid ? '+ Add item' : 'See plans'}
+        <span>0 of 50 items</span>
+        <button className="btn btn-outline sm" onClick={() => showToast('Uploads to the brand library are coming soon')}>
+          Add item
         </button>
       </div>
 
       <h3 className="app-h3">Social banner</h3>
       <p className="app-sub">Your logos and name on every clip. You can change it for any batch when you make clips.</p>
-      <div className="card gate-strip">
-        <span>Social banners are part of paid plans.</span>
-        <button className="btn btn-outline sm" onClick={() => showToast('Social banners unlock on paid plans')}>
-          See plans
-        </button>
-      </div>
       <div className="card">
         <label className="radio">
           <input type="checkbox" checked={showBanner} onChange={(e) => setShowBanner(e.target.checked)} /> Show on new
@@ -2322,7 +2272,7 @@ function DnaPage({
             Analyze your clips
           </button>
           <p className="form-note">Each analysis sharpens your DNA profile below.</p>
-          <p className="form-note">Connect TikTok to analyze clips →</p>
+          <p className="form-note">Connect TikTok to analyze clips.</p>
         </div>
       ) : (
         <>
@@ -2403,12 +2353,7 @@ function DnaPage({
               )}
               {tab === 'advisor' && (
                 <div className="card">
-                  <p>
-                    Advisor is part of paid plans.{' '}
-                    <a className="lnk" onClick={(e) => { e.preventDefault(); onUpgrade(); }}>
-                      Upgrade to Unlock
-                    </a>
-                  </p>
+                  <p>Advisor needs at least 10 posted clips to give useful advice.</p>
                 </div>
               )}
             </>
@@ -2459,14 +2404,6 @@ function AnalyticsPage({
         </div>
       ) : posted.length === 0 ? (
         <p className="app-sub">Post a clip to start collecting performance data.</p>
-      ) : !isPaid ? (
-        <div className="paygate">
-          <h3>Unlock {network === 'tiktok' ? 'TikTok' : 'YouTube'} Analytics</h3>
-          <p>See exactly how your clips perform — and what to post next.</p>
-          <button className="btn btn-purple" onClick={() => onNav('billing')}>
-            Upgrade to Unlock
-          </button>
-        </div>
       ) : (
         <>
           <div className="stats-row app-stats">
@@ -2493,201 +2430,6 @@ function AnalyticsPage({
       <button className="btn btn-outline sm" style={{ marginTop: 12 }} onClick={() => showToast('Analytics sync a few times a day')}>
         Refresh data
       </button>
-    </div>
-  );
-}
-
-function BillingPage({
-  profile,
-  showToast,
-  refresh,
-}: {
-  profile: Profile;
-  showToast: (m: string) => void;
-  refresh: () => Promise<void>;
-}) {
-  const [annual, setAnnual] = useState(false);
-  const [family, setFamily] = useState<'creator' | 'influencer' | 'suite'>('creator');
-
-  const families: Record<typeof family, Array<{ key: 'starter' | 'pro'; name: string; desc: string; flag?: string; chips: Array<[string, string]>; features: string[] }>> = {
-    creator: [
-      {
-        key: 'starter',
-        name: 'Cloudnivo Starter',
-        desc: 'Try posting: clip your videos and post the best ones.',
-        chips: [['5', 'TikTok posts / day'], ['200', 'minutes / mo'], ['200', 'AI credits / mo'], ['1', 'workspace']],
-        features: [
-          'Post and schedule every clip to TikTok & YouTube',
-          'Up to 5 TikTok posts a day per account',
-          'Watermark-free exports',
-          'Brand library: your own pictures, videos, intro and outro in your edits',
-          'Turbo Downloads: clips ready in about 10 seconds',
-          'Long-form videos → AI-graded short clips',
-          'Virality scores & predicted views per clip',
-          'Auto captions & silence cutting',
-          '3 Studio clips a month, each with a Director edit',
-          'TikTok & YouTube analytics',
-          'DNA Profile & AI content advisor',
-          'Email Support',
-        ],
-      },
-      {
-        key: 'pro',
-        name: 'Cloudnivo Pro',
-        desc: 'For weekly clippers posting volume across channels.',
-        flag: 'BEST FOR CLIPPERS',
-        chips: [['10', 'TikTok posts / day'], ['600', 'minutes / mo'], ['500', 'AI credits / mo'], ['3', 'workspaces']],
-        features: [
-          'Post and schedule every clip to TikTok & YouTube',
-          'Up to 10 TikTok posts a day per account',
-          'Watermark-free exports',
-          'Brand library: your own pictures, videos, intro and outro in your edits',
-          'Turbo Downloads: clips ready in about 10 seconds',
-          'Long-form videos → AI-graded short clips',
-          'Virality scores & predicted views per clip',
-          'Auto captions & silence cutting',
-          '3 Studio clips a month, each with a Director edit',
-          'TikTok & YouTube analytics',
-          'DNA Profile & AI content advisor',
-          'Priority Support',
-        ],
-      },
-    ],
-    influencer: [
-      {
-        key: 'starter',
-        name: 'Creator Starter',
-        desc: 'Get started turning one video into shareable variations.',
-        chips: [['5', 'TikTok posts / day'], ['21', 'Studio clips / mo'], ['1', 'workspace']],
-        features: [
-          'Post and schedule every clip to TikTok & YouTube',
-          'Watermark-free exports',
-          'Brand library',
-          'One video → platform-ready variations',
-          'Studio with Reaction Library & Brand Kit',
-          'TikTok & YouTube analytics',
-          'DNA Profile & AI content advisor',
-          'Email Support',
-        ],
-      },
-      {
-        key: 'pro',
-        name: 'Creator Pro',
-        desc: 'More variations across platforms, ready to scale.',
-        flag: 'RECOMMENDED',
-        chips: [['10', 'TikTok posts / day'], ['60', 'Studio clips / mo'], ['3', 'workspaces']],
-        features: [
-          'Post and schedule every clip to TikTok & YouTube',
-          'Watermark-free exports',
-          'Brand library',
-          'One video → platform-ready variations',
-          'Studio with Reaction Library & Brand Kit',
-          'TikTok & YouTube analytics',
-          'DNA Profile & AI content advisor',
-          'Priority Support',
-        ],
-      },
-    ],
-    suite: [
-      {
-        key: 'starter',
-        name: 'Suite Starter',
-        desc: 'Everything, together — for teams.',
-        chips: [['5', 'TikTok posts / day'], ['600', 'minutes / mo'], ['10', 'Studio clips / mo']],
-        features: ['Everything in Pro', 'Team workspaces', 'Shared brand kits', 'Email Support'],
-      },
-      {
-        key: 'pro',
-        name: 'Suite Pro',
-        desc: 'Everything, together — for teams at volume.',
-        flag: 'BEST VALUE',
-        chips: [['15', 'TikTok posts / day'], ['1800', 'minutes / mo'], ['30', 'Studio clips / mo']],
-        features: ['Everything in Starter', 'Priority Support', 'API access (soon)'],
-      },
-    ],
-  };
-
-  async function subscribe(key: 'starter' | 'pro') {
-    // Plans can only change through the payment webhook (Phase 7). The browser never writes plan or credits.
-    showToast(`Online checkout for ${PLANS[key].name} is coming soon.`);
-  }
-
-  return (
-    <div className="page-pad">
-      <h2 className="app-h">Choose Your Plan</h2>
-      <p className="app-sub">
-        You're on the <strong>{PLANS[profile.plan].name} plan</strong> — you have{' '}
-        {profile.minutes_limit - profile.minutes_used} free minutes left this month. Pick a plan to post
-        and schedule every clip, watermark-free.
-      </p>
-      <div className="toggle-row">
-        <span>Monthly</span>
-        <button className={`switch${annual ? ' on' : ''}`} onClick={() => setAnnual((a) => !a)} aria-label="Toggle annual" />
-        <span>Annual</span>
-        <em className="save-chip">Save ~20%</em>
-      </div>
-      <div className="tab-row">
-        {(
-          [
-            ['creator', 'Creator', 'Long-form → clips'],
-            ['influencer', 'Influencer', 'One video → variations'],
-            ['suite', 'Suite', 'Everything, together'],
-          ] as const
-        ).map(([id, label, sub]) => (
-          <button key={id} className={`tab${family === id ? ' on' : ''}`} onClick={() => setFamily(id)}>
-            <strong>{label}</strong>
-            <em>{sub}</em>
-          </button>
-        ))}
-      </div>
-      <div className="billing-grid">
-        {families[family].map((p) => {
-          const price = p.key === 'starter' ? 15 : 29;
-          const shown = annual ? Math.round(price * 0.8) : price;
-          const current = profile.plan === p.key;
-          return (
-            <div className={`billing-card${p.flag ? ' featured' : ''}`} key={p.name}>
-              {p.flag && <div className="plan-flag">{p.flag}</div>}
-              <h3>{p.name}</h3>
-              <p className="app-sub">{p.desc}</p>
-              <div className="plan-price">
-                <strong>${shown}</strong>
-                <span>/mo</span>
-              </div>
-              <div className="quota-chips">
-                {p.chips.map(([v, l]) => (
-                  <div className="quota-chip" key={l}>
-                    <strong>{v}</strong>
-                    <em>{l}</em>
-                  </div>
-                ))}
-              </div>
-              <ul>
-                {p.features.map((f) => (
-                  <li key={f}>
-                    <span className="li-check">✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                className={`btn plan-btn${p.key === 'pro' ? ' btn-purple' : ' btn-outline'}`}
-                disabled={current}
-                onClick={() => subscribe(p.key)}
-              >
-                {current ? 'Current plan' : 'Subscribe'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-      <p className="form-note" style={{ textAlign: 'center' }}>
-        Clips uses 1 minute for every minute of video it processes. AI Studio uses credits: images 3
-        cr · video 16–32 cr per 5 seconds depending on quality. Failed generations are refunded
-        automatically.
-      </p>
-      <p className="form-note" style={{ textAlign: 'center' }}>
-        🔒 Secure payment via Stripe · Cancel anytime
-      </p>
     </div>
   );
 }
@@ -2739,11 +2481,8 @@ function SettingsPage({
         <div className="card">
           <label className="set-label">Email</label>
           <div className="readonly">{email || 'signed in'}</div>
-          <label className="set-label">Plan</label>
-          <div className="plan-chip">{PLANS[profile.plan].name.toUpperCase()} · {profile.minutes_limit - profile.minutes_used} min left</div>
-          <a className="lnk" onClick={(e) => { e.preventDefault(); showToast('Manage subscription opens Stripe (soon)'); }}>
-            Manage subscription →
-          </a>
+          <label className="set-label">Usage</label>
+          <div className="plan-chip">{profile.minutes_limit - profile.minutes_used} min · {profile.credits_balance} credits</div>
           <label className="set-label" style={{ marginTop: 16 }}>Emails</label>
           <div className="conn-row">
             <span>Email me when my clips are ready</span>
@@ -2807,7 +2546,7 @@ function SettingsPage({
               <h3 className="app-h3">Reaction Library</h3>
               <p className="app-sub">Manage your reaction media by emotion</p>
             </div>
-            <button className="btn btn-purple sm" onClick={() => showToast('Reaction uploads are part of paid plans')}>
+            <button className="btn btn-purple sm" onClick={() => showToast('Reaction uploads are coming soon')}>
               + Add Media
             </button>
           </div>
