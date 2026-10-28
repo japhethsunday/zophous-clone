@@ -4,8 +4,12 @@ services:
     restart: unless-stopped
     volumes:
       - ollama:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 5m        # free the model's memory 5 minutes after the last use
+      OLLAMA_NUM_PARALLEL: "1"
     # Pull the ranking model once on first start.
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}; wait"]
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull ${OLLAMA_MODEL:-qwen2.5:1.5b}; wait"]
+    mem_limit: 2g
 
   worker:
     build:
@@ -17,9 +21,11 @@ services:
     env_file: .env
     environment:
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
-    # Each worker handles one job at a time; scale with:  docker compose up -d --scale worker=2
-    mem_limit: 6g
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+    # Sized for an 8 GB PC (Docker gets ~4 GB). One job at a time.
+    # On a bigger machine: raise this, set OLLAMA_MODEL=qwen2.5:3b, or add workers:
+    #   docker compose up -d --scale worker=2
+    mem_limit: 2g
 
 volumes:
   ollama:
