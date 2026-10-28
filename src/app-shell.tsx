@@ -609,38 +609,9 @@ function GenPage({
         <span className="gen-credits-pill">{creditsLeft} credits</span>
       </PageHeader>
 
-      <div className="gen-stats">
-        <div className="gen-stat">
-          <em>Credits</em>
-          <strong>
-            {creditsLeft}
-            <span> / {creditsLimit}</span>
-          </strong>
-          <i className="gen-delta">{usagePct}% used</i>
-          <div className="gen-track">
-            <div className="gen-track-fill" style={{ width: `${Math.min(100, usagePct)}%` }} />
-          </div>
-        </div>
-        <div className="gen-stat">
-          <em>Generations</em>
-          <strong>{gens?.length ?? 0}</strong>
-          <i className="gen-delta up">all time</i>
-        </div>
-        <div className="gen-stat">
-          <em>Models online</em>
-          <strong>{GEN_MODELS.length}</strong>
-          <i className="gen-delta up">video · image</i>
-        </div>
-        <div className="gen-stat">
-          <em>Minutes</em>
-          <strong>{profile.minutes_limit - profile.minutes_used}</strong>
-          <i className="gen-delta">clipping left</i>
-        </div>
-      </div>
-
       {tab === 'create' && (
         <>
-          <div className="gen-grid">
+          <div className="gen-grid gen-single">
             <div className="gen-panel gen-composer">
               <div className="gen-panel-head">
                 <h3>What are we creating today?</h3>
@@ -664,7 +635,7 @@ function GenPage({
                   ))}
                 </div>
               )}
-              <p className="gen-tip">Tip: subject + motion + lighting + mood beats a short prompt. Tap a format chip to start from a proven viral template.</p>
+              <p className="gen-tip">Describe the subject, motion, lighting and mood. Tap a format to start from a template.</p>
               {brand && (
                 <label className="gen-brand-toggle">
                   <input type="checkbox" checked={applyBrand} onChange={(e) => setApplyBrand(e.target.checked)} />
@@ -731,25 +702,6 @@ function GenPage({
               </div>
             </div>
 
-            <div className="gen-panel gen-usage">
-              <div className="gen-panel-head">
-                <h3>Credit usage</h3>
-                <span className="gen-kind">last 7 days</span>
-              </div>
-              <div className="gen-chart">
-                {last7.map((d) => (
-                  <div key={d.label} className="gen-chart-col">
-                    <div className="gen-chart-bar-wrap">
-                      <div
-                        className="gen-chart-bar"
-                        style={{ height: `${Math.max(4, (d.credits / peak) * 100)}%` }}
-                      />
-                    </div>
-                    <span>{d.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
         </>
