@@ -9,7 +9,7 @@ import socket
 import time
 from datetime import datetime, timedelta, timezone
 
-from .health import STATE, serve_in_background
+from .health import STATE, keep_awake, serve_in_background
 from .pipeline import process, render_edit
 from .supa import Supa
 
@@ -254,9 +254,19 @@ def drain(max_seconds: float = 3300) -> int:
 def main() -> None:
     signal.signal(signal.SIGTERM, _handle_stop)
     signal.signal(signal.SIGINT, _handle_stop)
-    db = Supa()
     if os.environ.get("PORT"):
         serve_in_background(int(os.environ["PORT"]))
+        keep_awake()
+    missing = [k for k in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY") if not os.environ.get(k)]
+    if missing:
+        # Stay up (so the host doesn't crash-loop) and say exactly what's missing.
+        STATE["ok"] = False
+        STATE["missing_secrets"] = missing
+        log.error("missing secrets %s; add them in the host's settings and restart", ", ".join(missing))
+        while not _stop:
+            time.sleep(30)
+        return
+    db = Supa()
     log.info("worker %s started", WORKER_ID)
     while not _stop:
         try:
