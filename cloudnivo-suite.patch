@@ -1,0 +1,1254 @@
+diff --git a/src/app-shell.tsx b/src/app-shell.tsx
+index 3cbdcf3..071e047 100644
+--- a/src/app-shell.tsx
++++ b/src/app-shell.tsx
+@@ -27,6 +27,9 @@ import {
+ const ClipsLibrary = lazy(() => import('./clips/ClipsLibrary'));
+ const ClipWorkspace = lazy(() => import('./clips/ClipWorkspace'));
+ const HomePage = lazy(() => import('./home'));
++const SuitePage = lazy(() => import('./suite'));
++const AssetsPage = lazy(() => import('./assets-page'));
++const DirectorPage = lazy(() => import('./director'));
+ 
+ /* ---------------- helpers ---------------- */
+ 
+@@ -57,6 +60,12 @@ const IC_PATHS: Record<string, React.ReactNode> = {
+       <path d="M18 14l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z" />
+     </>
+   ),
++  layers: (
++    <>
++      <path d="m12 3 9 5-9 5-9-5 9-5z" />
++      <path d="m3 13 9 5 9-5" />
++    </>
++  ),
+   calendar: (
+     <>
+       <rect x="3" y="5" width="18" height="16" rx="2" />
+@@ -129,6 +138,9 @@ const EMOTIONS = ['Agree', 'Awkward', 'Funny', 'Hype', 'Shocked'];
+ 
+ type Page =
+   | 'home'
++  | 'suite'
++  | 'assets'
++  | 'director'
+   | 'clips'
+   | 'studio'
+   | 'gen'
+@@ -634,7 +646,7 @@ function GenPage({
+ /* ---------------- main shell ---------------- */
+ 
+ export default function AppShell() {
+-  const PAGES: Page[] = ['home', 'clips', 'gen', 'brand', 'settings'];
++  const PAGES: Page[] = ['home', 'suite', 'assets', 'director', 'clips', 'gen', 'brand', 'settings'];
+   const pageFromHash = (): Page => {
+     const m = location.hash.match(/^#\/app\/([a-z]+)/);
+     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
+@@ -787,11 +799,16 @@ export default function AppShell() {
+             [
+               ['', [
+                 ['home', 'Dashboard', 'home'],
++                ['suite', 'Suite', 'layers'],
+               ]],
+               ['Create', [
+                 ['clips', 'Clips', 'scissors'],
+                 ['gen', 'Generate', 'sparkles'],
+               ]],
++              ['Library', [
++                ['assets', 'Assets', 'film'],
++                ['director', 'Director', 'calendar'],
++              ]],
+               ['Brand', [
+                 ['brand', 'Brand kit', 'diamond'],
+               ]],
+@@ -908,6 +925,39 @@ export default function AppShell() {
+         {toast && <div className="toast">{toast}</div>}
+ 
+         <Suspense fallback={<div className="page-pad" aria-busy="true" />}>
++        {page === 'suite' && profile && (
++          <SuitePage
++            profile={profile}
++            clips={clips}
++            videos={videos}
++            onNav={(p: Page) => go(p)}
++            onOpenVideo={(id: string) => go('clips', id)}
++            onPrompt={(text: string) => {
++              sessionStorage.setItem('cn_gen_prompt', text);
++              go('gen');
++            }}
++          />
++        )}
++
++        {page === 'assets' && profile && (
++          <AssetsPage
++            clips={clips}
++            videos={videos}
++            onOpenVideo={(id: string) => go('clips', id)}
++            onNav={(p) => go(p)}
++            showToast={showToast}
++          />
++        )}
++
++        {page === 'director' && profile && (
++          <DirectorPage
++            videos={videos}
++            clips={clips}
++            onOpenVideo={(id: string) => go('clips', id)}
++            onBack={() => go('suite')}
++          />
++        )}
++
+         {page === 'home' && profile && (
+           <HomePage
+             profile={profile}
+diff --git a/src/assets-page.tsx b/src/assets-page.tsx
+new file mode 100644
+index 0000000..b730603
+--- /dev/null
++++ b/src/assets-page.tsx
+@@ -0,0 +1,183 @@
++/* ============================================================
++   ASSETS — Cloudnivo media library, in the Suite layout language.
++   Everything you have ever made in one grid: clips (with quick
++   preview), posters/thumbs and audio stems. Filter, sort, search,
++   open a clip's project, copy caption text or download.
++   Aurora theme tokens only — no new visual language.
++   ============================================================ */
++import { useMemo, useState } from 'react';
++import type { Clip, Video } from './lib/supabase';
++import { assetsFromClips, fmtDur, presetById, VIRAL_PRESETS, type SuiteAsset } from './suite-data';
++import { SuiteIcon as Ic } from './suite-icons';
++import './clips/clips.css';
++
++type Tab = 'all' | 'clip' | 'image' | 'audio';
++type Sort = 'new' | 'old' | 'score' | 'title';
++
++export default function AssetsPage({
++  clips, videos, onOpenVideo, onNav, showToast,
++}: {
++  clips: Clip[];
++  videos: Video[];
++  onOpenVideo: (id: string) => void;
++  onNav: (p: 'suite' | 'clips') => void;
++  showToast: (t: string) => void;
++}) {
++  const [tab, setTab] = useState<Tab>('all');
++  const [q, setQ] = useState('');
++  const [sort, setSort] = useState<Sort>('new');
++  const [preset, setPreset] = useState<string>('');
++  const [playing, setPlaying] = useState<string | null>(null);
++
++  const all = useMemo<SuiteAsset[]>(() => {
++    const clipAssets = assetsFromClips(clips);
++    // posters are every rendered thumb — treat them as image assets
++    const posters: SuiteAsset[] = clipAssets
++      .filter((a) => a.thumb)
++      .map((a) => ({ ...a, id: `${a.id}-poster`, kind: 'image', title: `${a.title} — poster`, url: a.thumb, score: null, duration: null }));
++    // audio stems: transcript exists per project; expose source audio availability per video
++    const audio: SuiteAsset[] = videos
++      .filter((v) => v.source_path || v.source_url)
++      .map((v) => ({
++        id: `${v.id}-audio`, kind: 'audio', title: `${v.title} — audio`,
++        url: v.source_url ?? null, thumb: null, videoId: v.id, score: null,
++        duration: v.duration_seconds || null, createdAt: v.created_at,
++        watermark: false, posted: false,
++      }));
++    return [...clipAssets, ...posters, ...audio];
++  }, [clips, videos]);
++
++  const counts = useMemo(() => ({
++    all: all.length,
++    clip: all.filter((a) => a.kind === 'clip').length,
++    image: all.filter((a) => a.kind === 'image').length,
++    audio: all.filter((a) => a.kind === 'audio').length,
++  }), [all]);
++
++  const list = useMemo(() => {
++    let out = all;
++    if (tab !== 'all') out = out.filter((a) => a.kind === tab);
++    if (preset) out = out.filter((a) => a.presetId && (a.presetId.includes(preset) || preset.includes(a.presetId)));
++    if (q.trim()) {
++      const s = q.trim().toLowerCase();
++      out = out.filter((a) => a.title.toLowerCase().includes(s));
++    }
++    const by: Record<Sort, (a: SuiteAsset, b: SuiteAsset) => number> = {
++      new: (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
++      old: (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
++      score: (a, b) => (b.score ?? -1) - (a.score ?? -1),
++      title: (a, b) => a.title.localeCompare(b.title),
++    };
++    return [...out].sort(by[sort]);
++  }, [all, tab, q, sort, preset]);
++
++  const usedPresets = useMemo(() => {
++    const ids = new Set(all.map((a) => a.presetId).filter(Boolean) as string[]);
++    return VIRAL_PRESETS.filter((p) => ids.has(p.id));
++  }, [all]);
++
++  const copyTranscript = async (c: Clip) => {
++    try {
++      await navigator.clipboard.writeText(c.transcript ?? c.title ?? '');
++      showToast('Caption text copied');
++    } catch {
++      showToast('Could not copy — check browser permissions');
++    }
++  };
++
++  const TABS: [Tab, string][] = [['all', 'All'], ['clip', 'Clips'], ['image', 'Posters'], ['audio', 'Audio']];
++
++  return (
++    <div className="page-pad suite assets">
++      <div className="assets-head">
++        <h1 className="home-h1 serif">Assets</h1>
++        <p className="sub-left">Every clip, poster and stem you have made — searchable, sortable, one click from your projects.</p>
++      </div>
++
++      <div className="assets-toolbar">
++        <div className="assets-tabs" role="tablist" aria-label="Asset type">
++          {TABS.map(([t, label]) => (
++            <button key={t} role="tab" aria-selected={tab === t} className={`assets-tab${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
++              {label}<em>{counts[t]}</em>
++            </button>
++          ))}
++        </div>
++        <label className="assets-search">
++          <Ic name="search" size={15} />
++          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search titles…" aria-label="Search assets" />
++          {q && <button className="assets-clear" aria-label="Clear search" onClick={() => setQ('')}>×</button>}
++        </label>
++        <select className="assets-sort" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort assets">
++          <option value="new">Newest first</option>
++          <option value="old">Oldest first</option>
++          <option value="score">Top score</option>
++          <option value="title">A → Z</option>
++        </select>
++      </div>
++
++      {usedPresets.length > 0 && (
++        <div className="suite-chips">
++          <button className={`suite-chip${preset === '' ? ' on' : ''}`} onClick={() => setPreset('')}>Any format</button>
++          {usedPresets.map((p) => (
++            <button key={p.id} className={`suite-chip${preset === p.id ? ' on' : ''}`} onClick={() => setPreset(preset === p.id ? '' : p.id)} title={p.desc}>
++              {p.title}
++            </button>
++          ))}
++        </div>
++      )}
++
++      {list.length === 0 ? (
++        <p className="lib-empty">
++          {all.length === 0
++            ? <>Nothing here yet. <button className="lnk" onClick={() => onNav('clips')}>Upload a video</button> and your clips, posters and audio will collect right here.</>
++            : <>No assets match this filter. <button className="lnk" onClick={() => { setQ(''); setTab('all'); setPreset(''); }}>Reset filters</button></>}
++        </p>
++      ) : (
++        <div className="assets-grid">
++          {list.map((a) => {
++            const src = clips.find((c) => c.id === a.id);
++            const pre = presetById(a.presetId ?? undefined)?.title;
++            return (
++              <article key={a.id} className={`asset-card kind-${a.kind}`}>
++                <div className="asset-media">
++                  {a.kind === 'clip' && playing === a.id && a.url ? (
++                    <video src={a.url} controls autoPlay playsInline onEnded={() => setPlaying(null)} />
++                  ) : a.thumb ? (
++                    <img src={a.thumb} alt="" loading="lazy" />
++                  ) : (
++                    <span className="asset-ph"><Ic name={a.kind === 'audio' ? 'mic' : 'film'} size={26} /></span>
++                  )}
++                  {a.kind === 'clip' && !(playing === a.id && a.url) && (
++                    <button className="asset-play" aria-label={`Preview ${a.title}`} disabled={!a.url} onClick={() => setPlaying(a.id)}>
++                      <Ic name="play" size={16} />
++                    </button>
++                  )}
++                  {a.score != null && <span className="suite-shot-score">{Math.round(a.score)}</span>}
++                  <span className={`asset-badge tone-${a.kind === 'clip' ? 'pink' : a.kind === 'image' ? 'blue' : 'amber'}`}>{a.kind}</span>
++                </div>
++                <div className="asset-body">
++                  <strong className="asset-title" title={a.title}>{a.title}</strong>
++                  <span className="asset-meta">
++                    {fmtDur(a.duration)} · {new Date(a.createdAt).toLocaleDateString()}
++                    {pre ? ` · ${pre}` : ''}
++                    {a.watermark ? ' · WM' : ''}
++                    {a.posted ? ' · posted' : ''}
++                  </span>
++                  <div className="asset-actions">
++                    {a.videoId && <button className="lnk" onClick={() => onOpenVideo(a.videoId!)}>Open project</button>}
++                    {src?.transcript && <button className="lnk" onClick={() => void copyTranscript(src)}>Copy captions</button>}
++                    {a.url && <a className="lnk" href={a.url} target="_blank" rel="noreferrer" download>Download</a>}
++                  </div>
++                </div>
++              </article>
++            );
++          })}
++        </div>
++      )}
++
++      <div className="assets-foot">
++        <button className="btn btn-outline sm" onClick={() => onNav('suite')}>Back to Suite</button>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/clips/clips.css b/src/clips/clips.css
+index 29d2c79..ac51ab9 100644
+--- a/src/clips/clips.css
++++ b/src/clips/clips.css
+@@ -205,3 +205,110 @@
+   .shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+   .home-h1 { font-size: 21px; }
+ }
++
++/* ---------------- suite (creator-studio home) ---------------- */
++.suite { display: flex; flex-direction: column; gap: 30px; }
++.suite-bar { display: flex; align-items: center; gap: 10px; background: var(--raise); border: 1px solid var(--line-strong); border-radius: var(--radius-field, 14px); padding: 8px 8px 8px 14px; box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / .05)); max-width: 760px; }
++.suite-bar:focus-within { border-color: var(--ink); }
++.suite-bar-ic { color: var(--muted); display: grid; place-items: center; }
++.suite-bar-input { flex: 1; border: 0; background: transparent; font-size: 15px; color: var(--ink); outline: none; min-width: 0; }
++.suite-bar-input::placeholder { color: var(--faint); }
++.suite-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: -14px; }
++.suite-chip { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 600; transition: border-color .15s var(--ease), color .15s var(--ease); text-align: left; }
++.suite-chip:hover { border-color: var(--ink); color: var(--ink); }
++.suite-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
++.suite-cards { display: grid; gap: 10px; }
++.suite-cards.two { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
++.suite-cards.four { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
++.suite-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--raise); transition: border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease); }
++.suite-card:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: 0 6px 16px -10px rgb(0 0 0 / .18); }
++.suite-card strong { font-size: 15px; font-weight: 650; color: var(--ink); }
++.suite-card em { font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }
++.suite-card p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
++.suite-card-sub { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
++.suite-rail { display: grid; grid-auto-flow: column; grid-auto-columns: 230px; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
++.suite-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--raise); }
++.suite-tile strong { font-size: 14px; font-weight: 650; }
++.suite-tile p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); flex: 1; }
++.suite-tic-badge { align-self: stretch; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); background: var(--panel-warm); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; text-align: center; }
++.suite-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
++.suite-tool { display: flex; align-items: center; gap: 12px; padding: 12px; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--raise); transition: border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease); color: var(--faint); }
++.suite-tool:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: 0 6px 16px -10px rgb(0 0 0 / .18); }
++.suite-tool-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
++.suite-tool-txt strong { font-size: 14px; font-weight: 600; color: var(--ink); display: inline-flex; align-items: center; gap: 7px; }
++.suite-tool-txt span { font-size: 12.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++.suite-badge { font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; color: var(--signal, var(--accent-deep)); background: var(--sticker); border: 1px solid var(--accent-line); border-radius: 5px; padding: 1px 5px; }
++.suite-feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
++.suite-shot { position: relative; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-warm); padding: 0; }
++.suite-shot img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s var(--ease); }
++.suite-shot:hover img { transform: scale(1.04); }
++.suite-shot-score { position: absolute; top: 6px; right: 6px; font-size: 10.5px; font-weight: 800; color: #fff; background: rgb(14 16 32 / .72); border-radius: 6px; padding: 2px 6px; font-variant-numeric: tabular-nums; }
++
++/* ---------------- Suite extensions: Assets + Director ---------------- */
++.sub-left { text-align: left; margin: 6px 0 0; font-size: 14px; color: var(--muted); line-height: 1.6; }
++
++/* Assets */
++.assets-head { display: flex; flex-direction: column; gap: 2px; }
++.assets-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: -12px; }
++.assets-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--raise); }
++.assets-tab { border: 0; background: transparent; color: var(--muted); border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: background .15s var(--ease), color .15s var(--ease); }
++.assets-tab em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--faint); background: var(--panel-warm); border-radius: 999px; padding: 1px 6px; }
++.assets-tab:hover { color: var(--ink); }
++.assets-tab.on { background: var(--ink); color: #fff; }
++.assets-tab.on em { background: rgb(255 255 255 / .18); color: #fff; }
++.assets-search { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 12px; color: var(--faint); min-width: 200px; flex: 1; max-width: 320px; }
++.assets-search:focus-within { border-color: var(--ink); }
++.assets-search input { border: 0; outline: none; background: transparent; font-size: 13px; color: var(--ink); width: 100%; min-width: 0; }
++.assets-clear { border: 0; background: transparent; color: var(--faint); font-size: 15px; line-height: 1; cursor: pointer; }
++.assets-sort { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 999px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; outline: none; }
++.assets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
++.asset-card { border: 1px solid var(--line); border-radius: 12px; background: var(--raise); overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease); }
++.asset-card:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: 0 6px 16px -10px rgb(0 0 0 / .18); }
++.asset-media { position: relative; aspect-ratio: 9 / 13; background: var(--panel-warm); display: grid; place-items: center; overflow: hidden; }
++.asset-media img, .asset-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
++.asset-ph { color: var(--faint); display: grid; place-items: center; }
++.asset-play { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgb(0 0 0 / .55); color: #fff; display: grid; place-items: center; backdrop-filter: blur(4px); transition: transform .15s var(--ease); }
++.asset-play:hover:not(:disabled) { transform: translate(-50%, -50%) scale(1.06); }
++.asset-play:disabled { opacity: .45; cursor: default; }
++.asset-badge { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 6px; padding: 2px 7px; background: var(--panel); border: 1px solid var(--line); }
++.asset-body { display: flex; flex-direction: column; gap: 4px; padding: 11px 12px 12px; }
++.asset-title { font-size: 13px; font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++.asset-meta { font-size: 11.5px; color: var(--faint); }
++.asset-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
++.assets-foot { display: flex; justify-content: flex-start; }
++
++/* Director */
++.dir-top { display: flex; align-items: baseline; gap: 14px; }
++.dir-back { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; }
++.dir-count { margin-left: auto; font-size: 12px; color: var(--faint); }
++.dir-rail { grid-auto-columns: 190px; }
++.dir-pick { cursor: pointer; transition: border-color .15s var(--ease), box-shadow .15s var(--ease); }
++.dir-pick:hover { border-color: var(--line-strong); }
++.dir-pick.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
++.dir-stats { display: flex; flex-wrap: wrap; gap: 18px; font-size: 12.5px; color: var(--muted); padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--raise); }
++.dir-stats b { color: var(--ink); font-size: 15px; font-weight: 700; margin-right: 4px; }
++.dir-track { position: relative; height: 58px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-warm); overflow: visible; }
++.dir-track-base { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; opacity: .5; }
++.dir-track-base i { display: block; height: 100%; background: linear-gradient(90deg, var(--raise), var(--panel)); }
++.dir-mark { position: absolute; top: 10px; bottom: 10px; border: 0; border-radius: 6px; cursor: pointer; opacity: .9; transition: transform .12s var(--ease), opacity .12s var(--ease); }
++.dir-mark:hover { transform: scaleY(1.12); opacity: 1; }
++.dir-mark.sc-hot { background: var(--pink, #e0447c); }
++.dir-mark.sc-warm { background: var(--violet, #7a5af8); }
++.dir-mark.sc-cool { background: var(--blue, #3b82f6); }
++.dir-track-note { position: absolute; right: 10px; top: -22px; font-size: 11px; color: var(--faint); }
++.dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
++.dir-card { border: 1px solid var(--line); border-radius: 12px; background: var(--raise); overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease); }
++.dir-card:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: 0 6px 16px -10px rgb(0 0 0 / .18); }
++.dir-card.sc-hot { border-top: 2px solid var(--pink, #e0447c); }
++.dir-card.sc-warm { border-top: 2px solid var(--violet, #7a5af8); }
++.dir-card.sc-cool { border-top: 2px solid var(--blue, #3b82f6); }
++.dir-card-media { position: relative; aspect-ratio: 9 / 12; background: var(--panel-warm); }
++.dir-card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
++.dir-scene-n { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; }
++.dir-card-body { display: flex; flex-direction: column; gap: 5px; padding: 12px; }
++.dir-card-body strong { font-size: 13.5px; font-weight: 650; color: var(--ink); }
++.dir-why { margin: 0; font-size: 12px; line-height: 1.55; color: var(--muted); }
++.suite-chips.tight { margin-top: 0; }
++.suite-chips.tight .suite-chip { font-size: 11px; padding: 4px 10px; cursor: default; }
++.dir-export { display: flex; flex-direction: column; gap: 8px; }
++@media (max-width: 720px) { .assets-toolbar { flex-direction: column; align-items: stretch; } .assets-search { max-width: none; } .dir-stats { gap: 12px; } }
+diff --git a/src/director.tsx b/src/director.tsx
+new file mode 100644
+index 0000000..cc1fc73
+--- /dev/null
++++ b/src/director.tsx
+@@ -0,0 +1,156 @@
++/* ============================================================
++   DIRECTOR — long-form project view in the Suite layout language.
++   One upload becomes a production board: the source film with a
++   real timeline scrub, every scored clip as a scene card on the
++   same time axis, format chips per scene, and an export strip.
++   Aurora theme tokens only; reuses ClipWorkspace for deep edits.
++   ============================================================ */
++import { useMemo, useState } from 'react';
++import type { Clip, Video } from './lib/supabase';
++import { fmtDur } from './suite-data';
++import { SuiteIcon as Ic } from './suite-icons';
++import './clips/clips.css';
++
++const SCORE_TONE = (s: number) => (s >= 80 ? 'hot' : s >= 62 ? 'warm' : 'cool');
++
++export default function DirectorPage({
++  videos, clips, onOpenVideo, onBack,
++}: {
++  videos: Video[];
++  clips: Clip[];
++  onOpenVideo: (id: string) => void;
++  onBack: () => void;
++}) {
++  const projects = useMemo(
++    () => videos.filter((v) => v.mode === 'clips').sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)),
++    [videos],
++  );
++  const [selId, setSelId] = useState<string>('');
++  const sel = projects.find((p) => p.id === selId) ?? projects[0];
++
++  if (!sel) {
++    return (
++      <div className="page-pad suite">
++        <h1 className="home-h1 serif">Director</h1>
++        <p className="lib-empty">
++          No long-form projects yet. <button className="lnk" onClick={onBack}>Go back to the Suite</button> and start a Clip job — finished uploads open here as a production board.
++        </p>
++      </div>
++    );
++  }
++
++  const scenes = clips
++    .filter((c) => c.video_id === sel.id)
++    .sort((a, b) => a.start_seconds - b.start_seconds);
++  const total = Math.max(sel.duration_seconds || 0, scenes.length ? scenes[scenes.length - 1].end_seconds : 0, 1);
++  const avg = scenes.length ? Math.round(scenes.reduce((s, c) => s + (c.score ?? 0), 0) / scenes.length) : 0;
++  const best = scenes.reduce<Clip | null>((m, c) => (!m || (c.score ?? 0) > (m.score ?? 0) ? c : m), null);
++
++  return (
++    <div className="page-pad suite director">
++      <div className="dir-top">
++        <button className="lnk dir-back" onClick={onBack}><Ic name="back" size={14} /> Suite</button>
++        <h1 className="home-h1 serif">Director</h1>
++        <span className="dir-count">{projects.length} project{projects.length === 1 ? '' : 's'}</span>
++      </div>
++
++      {/* project switcher rail */}
++      <div className="suite-rail dir-rail">
++        {projects.map((p) => {
++          const n = clips.filter((c) => c.video_id === p.id).length;
++          return (
++            <button key={p.id} className={`suite-tile dir-pick${p.id === sel.id ? ' on' : ''}`} onClick={() => setSelId(p.id)}>
++              <strong>{p.title}</strong>
++              <p>{fmtDur(p.duration_seconds)} · {n} scene{n === 1 ? '' : 's'} · {p.status}</p>
++            </button>
++          );
++        })}
++      </div>
++
++      {/* stat strip */}
++      <div className="dir-stats">
++        <span><b>{scenes.length}</b> scenes found</span>
++        <span><b>{avg}</b> avg score</span>
++        <span><b>{fmtDur(total)}</b> runtime</span>
++        {best && <span><b>{Math.round(best.score ?? 0)}</b> top: “{best.title?.slice(0, 34)}{best.title && best.title.length > 34 ? '…' : ''}”</span>}
++      </div>
++
++      {/* timeline */}
++      <section>
++        <h2 className="lib-h2">Timeline</h2>
++        <div className="dir-track" aria-label={`Timeline of ${sel.title}`}>
++          <div className="dir-track-base"><i style={{ width: `${Math.max(3, sel.progress ?? (sel.status === 'ready' ? 100 : 0))}%` }} /></div>
++          {scenes.map((c) => {
++            const left = (c.start_seconds / total) * 100;
++            const w = Math.max(1.2, ((c.end_seconds - c.start_seconds) / total) * 100);
++            return (
++              <button
++                key={c.id}
++                className={`dir-mark sc-${SCORE_TONE(c.score ?? 0)}`}
++                style={{ left: `${left}%`, width: `${w}%` }}
++                title={`${c.title} · ${fmtDur(c.end_seconds - c.start_seconds)} · score ${Math.round(c.score ?? 0)}`}
++                onClick={() => onOpenVideo(sel.id)}
++              />
++            );
++          })}
++          {sel.status !== 'ready' && <span className="dir-track-note">{sel.status === 'failed' ? 'Job failed — retry from Clips' : 'Scenes appear on the bar as they are found…'}</span>}
++        </div>
++      </section>
++
++      {/* scene cards */}
++      <section>
++        <h2 className="lib-h2">Scene cards</h2>
++        {scenes.length === 0 ? (
++          <p className="lib-empty">No scenes yet — this project is still being watched by the moment finder.</p>
++        ) : (
++          <div className="dir-grid">
++            {scenes.map((c, i) => (
++              <article key={c.id} className={`dir-card sc-${SCORE_TONE(c.score ?? 0)}`}>
++                <div className="dir-card-media">
++                  {c.thumb_url ? <img src={c.thumb_url} alt="" loading="lazy" /> : <span className="thumb-ph wide" />}
++                  <span className="dir-scene-n">SC {String(i + 1).padStart(2, '0')}</span>
++                  <span className="suite-shot-score">{Math.round(c.score ?? 0)}</span>
++                </div>
++                <div className="dir-card-body">
++                  <strong>{c.title}</strong>
++                  <span className="asset-meta">
++                    {fmtDur(c.start_seconds)} → {fmtDur(c.end_seconds)} · {fmtDur(c.end_seconds - c.start_seconds)}
++                  </span>
++                  {(c.hook || c.tone) && (
++                    <div className="suite-chips tight">
++                      {c.hook && <span className="suite-chip on">{c.hook}</span>}
++                      {c.tone && <span className="suite-chip">{c.tone}</span>}
++                    </div>
++                  )}
++                  {c.why_it_performed && <p className="dir-why">{c.why_it_performed}</p>}
++                  <div className="asset-actions">
++                    <button className="lnk" onClick={() => onOpenVideo(sel.id)}>Open in workspace</button>
++                    {c.clip_url && <a className="lnk" href={c.clip_url} download>Export</a>}
++                  </div>
++                </div>
++              </article>
++            ))}
++          </div>
++        )}
++      </section>
++
++      {/* export strip */}
++      <section className="dir-export">
++        <h2 className="lib-h2">Export reel</h2>
++        <p className="sub-left">Rank order, one tap each — the highest scoring scenes first.</p>
++        <div className="suite-cards two">
++          <button className="suite-card" onClick={() => onOpenVideo(sel.id)} disabled={!scenes.length}>
++            <span className="tool-ic tone-pink"><Ic name="download" size={16} /></span>
++            <strong>Download all {scenes.length} clips</strong>
++            <span className="suite-card-sub">Opens the workspace where you can pick caption style and watermark before export.</span>
++          </button>
++          <button className="suite-card" onClick={() => onOpenVideo(sel.id)} disabled={!scenes.length}>
++            <span className="tool-ic tone-violet"><Ic name="calendar" size={16} /></span>
++            <strong>Schedule the reel</strong>
++            <span className="suite-card-sub">Queue {scenes.length} vertical posts to TikTok, Reels and Shorts from Settings → Connections.</span>
++          </button>
++        </div>
++      </section>
++    </div>
++  );
++}
+diff --git a/src/suite-data.ts b/src/suite-data.ts
+new file mode 100644
+index 0000000..d642151
+--- /dev/null
++++ b/src/suite-data.ts
+@@ -0,0 +1,93 @@
++/* ============================================================
++   SUITE DATA — shared presets/formats used by the Suite home,
++   the Assets library and the Director view. Kept in its own
++   module so the worker pipeline (moments.py FORMATS) can stay
++   in sync with the frontend one-for-one.
++   ============================================================ */
++
++export type ClipFormat = {
++  id: string;            // stable id — mirrored in worker/cloudnivo_worker/moments.py FORMATS
++  title: string;
++  desc: string;
++  format: string;        // human label shown on the badge
++  prompt: string;        // instruction sent into Studio / attached to a clip job
++};
++
++export const VIRAL_PRESETS: ClipFormat[] = [
++  { id: 'podcast-punchline',    title: 'Podcast Punchline',    desc: 'Best hooks cut from talking-head audio',      format: 'Hook-first clip', prompt: 'Cut the three strongest punchlines from this podcast, big captions, face centered' },
++  { id: 'hot-take-monologue',   title: 'Hot-Take Monologue',   desc: 'One opinion, one vertical clip',              format: 'Talking head',    prompt: 'Isolate the most quotable opinion segment and caption it word by word' },
++  { id: 'story-arc-clip',       title: 'Story Arc Clip',       desc: 'Setup → tension → payoff, auto-scored',       format: 'Narrative',       prompt: 'Find a complete mini-story with a beginning, twist and ending' },
++  { id: 'listicle-cuts',        title: 'Listicle Cuts',        desc: 'Numbered segments become numbered clips',     format: 'Listicle',        prompt: 'Split the top-ten segment into individual clips with number stickers' },
++  { id: 'qa-split',             title: 'Q&A Split',            desc: 'Question as hook, answer as clip',            format: 'Interview',       prompt: 'Pair every question with its best answer as its own short clip' },
++  { id: 'b-roll-highlight',     title: 'B-Roll Highlight',     desc: 'Action moments, minimal captions',            format: 'Montage',         prompt: 'Pick the highest-motion moments and keep captions sparse' },
++  { id: 'quote-card-clip',      title: 'Quote Card Clip',      desc: 'Shareable quote with aurora frame',           format: 'Quote',           prompt: 'Extract the most shareable quote and style it as a caption card' },
++  { id: 'countdown-teaser',     title: 'Countdown Teaser',     desc: 'End-hook teaser for live streams',            format: 'Teaser',          prompt: 'Build a suspenseful teaser that ends right before the reveal' },
++];
++
++export function presetById(id: string | null | undefined): ClipFormat | undefined {
++  return id ? VIRAL_PRESETS.find((p) => p.id === id) : undefined;
++}
++
++/** Worker clips carry the trending-format label in `hook` (see pipeline.py);
++    map it back to the matching Suite preset. */
++const PRESET_BY_LABEL: Record<string, string> = Object.fromEntries(
++  VIRAL_PRESETS.map((p) => [p.format.toLowerCase(), p.id]),
++);
++
++export function presetIdFromHook(hook: string | null | undefined): string | null {
++  if (!hook) return null;
++  const h = String(hook).trim().toLowerCase();
++  return PRESET_BY_LABEL[h] ?? VIRAL_PRESETS.find((p) => p.id === h)?.id ?? null;
++}
++
++/* ---------------- asset helpers (Suite-derived pages) ---------------- */
++
++export type AssetKind = 'clip' | 'image' | 'audio';
++
++export type SuiteAsset = {
++  id: string;
++  kind: AssetKind;
++  title: string;
++  url: string | null;        // playable/downloadable (signed when available)
++  thumb: string | null;      // poster image
++  videoId: string | null;
++  score: number | null;
++  duration: number | null;   // seconds
++  createdAt: string;
++  watermark: boolean;
++  posted: boolean;
++  presetId?: string | null;  // which trending format shaped this clip, if any
++};
++
++const fmtMap: Record<string, string> = {
++  bold: 'Bold captions', karaoke: 'Karaoke captions', minimal: 'Minimal captions',
++};
++
++export function assetsFromClips(clips: import('./lib/supabase').Clip[]): SuiteAsset[] {
++  return clips.map((c) => ({
++    id: c.id,
++    kind: 'clip' as AssetKind,
++    title: c.title || 'Untitled clip',
++    url: c.clip_url ?? null,
++    thumb: c.thumb_url ?? null,
++    videoId: c.video_id,
++    score: c.score ?? null,
++    duration: Math.max(0, (c.end_seconds ?? 0) - (c.start_seconds ?? 0)),
++    createdAt: c.created_at,
++    watermark: !!c.watermarked,
++    posted: !!c.posted_at,
++    presetId: presetIdFromHook(c.hook),
++  }));
++}
++
++export function assetCaptionStyle(captionStyle: string): string {
++  return fmtMap[captionStyle] ?? 'Captions';
++}
++
++export function fmtDur(sec: number | null): string {
++  if (sec == null || !isFinite(sec)) return '—';
++  const s = Math.round(sec);
++  const m = Math.floor(s / 60);
++  const r = s % 60;
++  return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${r}s`;
++}
+diff --git a/src/suite-icons.tsx b/src/suite-icons.tsx
+new file mode 100644
+index 0000000..a002503
+--- /dev/null
++++ b/src/suite-icons.tsx
+@@ -0,0 +1,33 @@
++/* Shared inline icons for Suite-derived pages — same 24px,
++   1.7 stroke style as the app shell. Exported so Assets and
++   Director reuse one set instead of duplicating paths. */
++import type { ReactNode } from 'react';
++
++const PATHS: Record<string, ReactNode> = {
++  scissors: (<><circle cx="6" cy="6" r="2.6" /><circle cx="6" cy="18" r="2.6" /><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12" /></>),
++  film: (<><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4" /></>),
++  sparkles: (<><path d="M10 3l1.8 4.7L16.5 9.5l-4.7 1.8L10 16l-1.8-4.7L3.5 9.5l4.7-1.8L10 3z" /><path d="M18 14l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z" /></>),
++  diamond: (<><path d="M12 3 3 12l9 9 9-9-9-9z" /></>),
++  calendar: (<><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 11h18" /></>),
++  palette: (<><circle cx="12" cy="12" r="9" /><circle cx="9" cy="9.5" r="1.2" /><circle cx="14.5" cy="9" r="1.2" /><circle cx="15.5" cy="14" r="1.2" /></>),
++  chart: (<><path d="M4 20V10M10 20V4M16 20v-8M21 20H3" /></>),
++  mic: (<><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>),
++  type: (<><path d="M5 7V5h14v2M12 5v14M9 19h6" /></>),
++  chat: (<><path d="M21 12a8 8 0 0 1-8 8H5l2-3a8 8 0 1 1 14-5z" /></>),
++  megaphone: (<><path d="M3 11v3l4 1 9 4V6L7 10l-4 1z" /><path d="M19 9a3 3 0 0 1 0 6" /></>),
++  arrow: (<><path d="M5 12h14M13 6l6 6-6 6" /></>),
++  layers: (<><path d="m12 3 9 5-9 5-9-5 9-5z" /><path d="m3 13 9 5 9-5" /></>),
++  search: (<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></>),
++  play: (<><path d="M8 5.5v13l11-6.5-11-6.5z" /></>),
++  clock: (<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>),
++  download: (<><path d="M12 4v11m0 0 4-4m-4 4-4-4M4 19h16" /></>),
++  back: (<><path d="M19 12H5M11 6l-6 6 6 6" /></>),
++};
++
++export function SuiteIcon({ name, size = 17 }: { name: string; size?: number }) {
++  return (
++    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
++      {PATHS[name] ?? PATHS.sparkles}
++    </svg>
++  );
++}
+diff --git a/src/suite.tsx b/src/suite.tsx
+new file mode 100644
+index 0000000..a5fa3d9
+--- /dev/null
++++ b/src/suite.tsx
+@@ -0,0 +1,249 @@
++/* ============================================================
++   SUITE — creator-suite style home (OpenArt layout language),
++   rebuilt entirely in the Cloudnivo "Aurora" theme. It mirrors
++   the structure (prompt bar, agents row, presets rail, tool
++   grid, model cards, inspiration feed) but every destination,
++   tool and piece of copy is Cloudnivo's own. Existing theme
++   tokens, radii, tones and components only — no restyle.
++   ============================================================ */
++import { useState } from 'react';
++import type { Clip, Profile, Video } from './lib/supabase';
++import { stageLabel } from './clips/ClipsLibrary';
++import { VIRAL_PRESETS, fmtDur } from './suite-data';
++import { SuiteIcon } from './suite-icons';
++import './clips/clips.css';
++
++export type SuiteDest = 'home' | 'suite' | 'assets' | 'director' | 'clips' | 'gen' | 'brand' | 'settings';
++
++type Preset = import('./suite-data').ClipFormat;
++
++/* ---------------- data (Cloudnivo's own tools & formats) ---------------- */
++
++const STARTER_PROMPTS: [string, string][] = [
++  ['Turn my podcast into shorts', 'Clip a long talk into captioned 9:16 moments.'],
++  ['Product ad for my store', 'A 15-second energetic ad from a prompt.'],
++  ['A 30s story about how octopuses think', 'Narrated story video with scenes and captions.'],
++  ['Explainer for my SaaS signup flow', 'Calm, clear explainer with voiceover.'],
++];
++
++type Tool = { id: string; name: string; desc: string; badge?: string; icon: string; tone: string; go?: SuiteDest; prompt?: string };
++
++const SUITE_TOOLS: Tool[] = [
++  { id: 'clip', name: 'Clip a video', desc: 'Long upload in, captioned shorts out', icon: 'scissors', tone: 'pink', go: 'clips' },
++  { id: 'story', name: 'Story video', desc: 'Script, voiceover, scenes and captions from a prompt', badge: 'AI', icon: 'film', tone: 'violet', prompt: 'Create a narrated story video about ' },
++  { id: 'motion', name: 'Motion clip', desc: 'Short AI motion clip, 480p', icon: 'sparkles', tone: 'green', prompt: 'A short motion clip: subject, motion, lighting, mood — ' },
++  { id: 'image', name: 'Still image', desc: 'FLUX images from a prompt', icon: 'diamond', tone: 'blue', prompt: 'An image of ' },
++  { id: 'captions', name: 'Relabel captions', desc: 'Restyle word-by-word captions on any finished clip', icon: 'type', tone: 'amber', go: 'clips' },
++  { id: 'schedule', name: 'Schedule posts', desc: 'Queue clips to TikTok, Reels and Shorts', badge: 'NEW', icon: 'calendar', tone: 'teal', go: 'settings' },
++  { id: 'brand', name: 'Brand kit', desc: 'Lock colors, fonts and logo into every clip', icon: 'palette', tone: 'pink', go: 'brand' },
++  { id: 'dna', name: 'Clip DNA', desc: 'Patterns that made your clips perform', icon: 'chart', tone: 'violet', go: 'clips' },
++  { id: 'assets', name: 'Assets library', desc: 'Every clip, poster and stem in one searchable grid', icon: 'layers', tone: 'blue', go: 'assets' },
++  { id: 'director', name: 'Director mode', desc: 'Your long videos as scored production boards', icon: 'megaphone', tone: 'violet', go: 'director' },
++];
++
++type ModelCard = { name: string; tag: string; desc: string; icon: string; tone: string; go: SuiteDest };
++
++const LATEST_MODELS: ModelCard[] = [
++  { name: 'Story video', tag: 'Narration pipeline', desc: 'Script, voiceover, scene renders and burned-in captions in one job.', icon: 'film', tone: 'pink', go: 'gen' },
++  { name: 'Wan 2.2', tag: 'Motion model', desc: 'Fast 480p text-to-video for b-roll, loops and teasers.', icon: 'sparkles', tone: 'green', go: 'gen' },
++  { name: 'FLUX', tag: 'Image model', desc: 'Stills for thumbnails, posters and brand frames.', icon: 'diamond', tone: 'blue', go: 'gen' },
++  { name: 'Whisper moment finder', tag: 'Transcription', desc: 'Word-level transcription plus hook scoring across your whole upload.', icon: 'mic', tone: 'amber', go: 'clips' },
++];
++
++type InspireCat = { name: string; blurb: string; filter: string };
++
++const INSPIRE_CATS: InspireCat[] = [
++  { name: 'Podcasts', blurb: 'Punchlines, hot takes and quote cards pulled from long talks', filter: 'podcast' },
++  { name: 'Education', blurb: 'Explainers and concept clips that teach in under a minute', filter: 'explainer' },
++  { name: 'Marketing', blurb: 'Product ads, offers and UGC-style promos', filter: 'ad' },
++  { name: 'Stories', blurb: 'Narrated AI stories with scenes and voiceover', filter: 'story' },
++  { name: 'Gaming', blurb: 'Stream highlights, clutch moments and montages', filter: 'gaming' },
++  { name: 'Interviews', blurb: 'Q&A splits with speaker-tracked faces', filter: 'interview' },
++];
++
++/* ---------------- section header ---------------- */
++
++function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
++  return (
++    <div className="sec-row">
++      <h2 className="lib-h2">{title}</h2>
++      {action && <button className="lnk" onClick={onAction}>{action}</button>}
++    </div>
++  );
++}
++
++/* ---------------- main page ---------------- */
++
++export default function SuitePage({
++  profile, clips, videos, onNav, onOpenVideo, onPrompt,
++}: {
++  profile: Profile;
++  clips: Clip[];
++  videos: Video[];
++  onNav: (p: SuiteDest) => void;
++  onOpenVideo: (id: string) => void;
++  onPrompt: (text: string) => void;
++}) {
++  const [prompt, setPrompt] = useState('');
++  const [cat, setCat] = useState<string>('');
++  const first = (profile.display_name ?? '').split(/[\s@._-]/)[0];
++  const minutesLeft = profile.minutes_limit - profile.minutes_used;
++
++  const projects = videos.filter((v) => v.mode === 'clips').slice(0, 3);
++  const gallery = [...clips].filter((c) => c.thumb_url)
++    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)).slice(0, 12);
++
++  const feed = cat
++    ? gallery.filter((c) => (c.title ?? '').toLowerCase().includes(cat))
++    : gallery;
++
++  const run = (text: string) => { if (text.trim()) onPrompt(text.trim()); };
++
++  return (
++    <div className="page-pad suite">
++      {/* greeting + prompt bar */}
++      <h1 className="home-h1 serif">{first ? `What are we making today, ${first}?` : 'What are we making today?'}</h1>
++      <form className="suite-bar" onSubmit={(e) => { e.preventDefault(); run(prompt); }}>
++        <span className="suite-bar-ic"><SuiteIcon name="sparkles" size={18} /></span>
++        <input
++          className="suite-bar-input"
++          value={prompt}
++          onChange={(e) => setPrompt(e.target.value)}
++          placeholder="Describe what you want to make — a clip, a story, an ad…"
++          aria-label="Creation prompt"
++        />
++        <button className="btn btn-purple sm" type="submit" disabled={!prompt.trim()}>Create</button>
++      </form>
++      <div className="suite-chips">
++        {STARTER_PROMPTS.map(([label]) => (
++          <button key={label} className="suite-chip" onClick={() => { setPrompt(label); run(label); }}>{label}</button>
++        ))}
++      </div>
++
++      {/* agents row — two headline workflows */}
++      <section aria-labelledby="s-agents">
++        <SectionHead title="AGENTS" />
++        <div className="suite-cards two">
++          <button className="suite-card" onClick={() => onNav('clips')}>
++            <span className="tool-ic tone-pink"><SuiteIcon name="chat" size={18} /></span>
++            <strong>Clip Mode</strong>
++            <span className="suite-card-sub">Upload a long video, get scored captioned shorts. {minutesLeft} minutes left this month.</span>
++          </button>
++          <button className="suite-card" onClick={() => onNav('gen')}>
++            <span className="tool-ic tone-cyan"><SuiteIcon name="megaphone" size={18} /></span>
++            <strong>Studio Mode</strong>
++            <span className="suite-card-sub">Full videos from a single prompt — script, voiceover, scenes and captions.</span>
++          </button>
++        </div>
++      </section>
++
++      {/* pinned projects */}
++      <section aria-labelledby="s-proj">
++        <SectionHead title="Your projects" action="Open in Director" onAction={() => onNav('director')} />
++        {projects.length === 0 ? (
++          <p className="lib-empty">Nothing here yet. <button className="lnk" onClick={() => onNav('clips')}>Upload your first video</button> and it will show up right here.</p>
++        ) : (
++          <ul className="proj-list">
++            {projects.map((v) => {
++              const vc = clips.filter((c) => c.video_id === v.id);
++              const working = v.status === 'queued' || v.status === 'analyzing';
++              return (
++                <li key={v.id} className={`proj proj-${v.status}`}>
++                  <button className="proj-strip" onClick={() => onOpenVideo(v.id)} disabled={!vc.length} aria-label={`Open ${v.title}`}>
++                    {vc.length ? vc.slice(0, 5).map((c) => (c.thumb_url ? <img key={c.id} src={c.thumb_url} alt="" loading="lazy" /> : <span key={c.id} className="thumb-ph" />))
++                      : <span className="thumb-ph wide" />}
++                  </button>
++                  <div className="proj-body">
++                    <strong className="proj-title">{v.title}</strong>
++                    {working && (
++                      <div className="proj-work" role="status">
++                        <div className="bar" aria-hidden="true"><i style={{ width: `${Math.max(3, v.progress ?? 0)}%` }} /></div>
++                        <span>{stageLabel(v)} · {v.progress ?? 0}%</span>
++                      </div>
++                    )}
++                  </div>
++                </li>
++              );
++            })}
++          </ul>
++        )}
++      </section>
++
++      {/* presets — ids mirror FORMATS in worker/cloudnivo_worker/moments.py,
++          so the same eight formats score clips in the pipeline */}
++      <section aria-labelledby="s-pre">
++        <SectionHead title="Trending clip presets" action="Use on any project" onAction={() => onNav('clips')} />
++        <div className="suite-rail">
++          {VIRAL_PRESETS.map((p) => (
++            <article key={p.id} className="suite-tile">
++              <span className="suite-tic-badge">{p.format}</span>
++              <strong>{p.title}</strong>
++              <p>{p.desc}</p>
++              <button className="btn btn-outline sm" onClick={() => onPrompt(p.prompt)}>Use</button>
++            </article>
++          ))}
++        </div>
++      </section>
++
++      {/* tools grid */}
++      <section aria-labelledby="s-tools">
++        <SectionHead title="Get started with tools" />
++        <div className="suite-grid">
++          {SUITE_TOOLS.map((t) => (
++            <button
++              key={t.id}
++              className="suite-tool"
++              onClick={() => (t.prompt ? onPrompt(t.prompt) : onNav(t.go ?? 'home'))}
++            >
++              <span className={`tool-ic tone-${t.tone}`}><SuiteIcon name={t.icon} size={16} /></span>
++              <span className="suite-tool-txt">
++                <strong>{t.name}{t.badge && <em className="suite-badge">{t.badge}</em>}</strong>
++                <span>{t.desc}</span>
++              </span>
++              <SuiteIcon name="arrow" size={14} />
++            </button>
++          ))}
++        </div>
++      </section>
++
++      {/* models */}
++      <section aria-labelledby="s-models">
++        <SectionHead title="Latest models" action="Open Studio" onAction={() => onNav('gen')} />
++        <div className="suite-cards four">
++          {LATEST_MODELS.map((m) => (
++            <button key={m.name} className="suite-card tall" onClick={() => onNav(m.go)}>
++              <span className={`tool-ic tone-${m.tone}`}><SuiteIcon name={m.icon} size={16} /></span>
++              <strong>{m.name}</strong>
++              <em>{m.tag}</em>
++              <p>{m.desc}</p>
++            </button>
++          ))}
++        </div>
++      </section>
++
++      {/* inspirations */}
++      <section aria-labelledby="s-insp">
++        <SectionHead title="Inspirations" action={cat ? 'Clear filter' : 'Open assets'} onAction={() => (cat ? setCat('') : onNav('assets'))} />
++        <div className="suite-chips">
++          {INSPIRE_CATS.map((c) => (
++            <button key={c.name} className={`suite-chip${cat === c.filter ? ' on' : ''}`} onClick={() => setCat(cat === c.filter ? '' : c.filter)} title={c.blurb}>
++              {c.name}
++            </button>
++          ))}
++        </div>
++        {feed.length === 0 ? (
++          <p className="lib-empty">Finished clips appear here as inspiration once they render.</p>
++        ) : (
++          <div className="suite-feed">
++            {feed.map((c) => (
++              <button key={c.id} className="suite-shot" onClick={() => c.video_id && onOpenVideo(c.video_id)} aria-label={`Open clip ${c.title ?? ''}`}>
++                <img src={c.thumb_url!} alt="" loading="lazy" />
++                {c.score != null && <span className="suite-shot-score">{Math.round(c.score)}</span>}
++              </button>
++            ))}
++          </div>
++        )}
++      </section>
++    </div>
++  );
++}
+diff --git a/vite.config.ts b/vite.config.ts
+index 0466183..2580bba 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -3,4 +3,10 @@ import react from '@vitejs/plugin-react';
+ 
+ export default defineConfig({
+   plugins: [react()],
++  server: {
++    host: '0.0.0.0',
++    port: 5173,
++    strictPort: true,
++    allowedHosts: true,
++  },
+ });
+diff --git a/worker/cloudnivo_worker/moments.py b/worker/cloudnivo_worker/moments.py
+index 2cefc72..d2cfba7 100644
+--- a/worker/cloudnivo_worker/moments.py
++++ b/worker/cloudnivo_worker/moments.py
+@@ -2,11 +2,19 @@
+ 
+ Pure Python (no model calls) so it is unit-testable. LLM ranking lives in llm.py
+ and only re-orders/annotates the candidates produced here.
++
++FORMATS mirrors VIRAL_PRESETS in src/suite-data.ts one-for-one: each trending
++clip preset on the Suite page has a scoring profile here, so "Use" on a preset
++and per-format scoring in the pipeline speak the same language. A job can pin
++one format via input["format"] (the preset id); otherwise every candidate is
++scored under every profile and keeps its best fit.
+ """
+ 
+ from __future__ import annotations
+ 
++import re
+ from dataclasses import dataclass, field
++from typing import Optional
+ 
+ HOOK_WORDS = {
+     "secret", "never", "always", "mistake", "truth", "why", "how", "nobody", "everyone",
+@@ -14,6 +22,51 @@ HOOK_WORDS = {
+     "money", "free", "actually", "really", "imagine", "listen", "wait", "seriously",
+ }
+ 
++QUESTION_RE = re.compile(r"\?")
++EXCLAIM_RE = re.compile(r"!|\b\d+%|\bbillion\b|\bmillion\b")
++NUMBERED_RE = re.compile(r"\b(?:top|number|first|second|third|#)\b[\s\w]{0,12}?\b(one|two|three|four|five|six|seven|eight|nine|ten|\d{1,2})\b", re.I)
++QUOTE_RE = re.compile(r'"[^"]{15,}"|\u201c[^\u201d]{15,}\u201d')
++ANSWER_RE = re.compile(r"\b(because|so that|the reason|answer is|it means|here'?s how)\b", re.I)
++TENSION_RE = re.compile(r"\b(but|until|then|suddenly|however|turned out|ended up|twist)\b", re.I)
++PAYOFF_RE = re.compile(r"\b(so|in the end|finally|lesson|takeaway|that'?s why|the point)\b", re.I)
++ACTION_RE = re.compile(r"\b(go|goes|hit|hits|run|runs|jump|crash|win|wins|score|scores|chase|boom|watch this|look at this)\b", re.I)
++
++
++@dataclass(frozen=True)
++class ClipFormat:
++    """A trending format with its own scoring profile."""
++    id: str
++    label: str
++    min_len: float
++    max_len: float
++    sweet: float           # preferred duration (length_fit peaks here)
++    density_w: float       # weight on words-per-second speech density
++    hook_w: float          # weight on HOOK_WORDS appearing early
++    punct_w: float         # weight on questions/exclamations
++    length_w: float        # weight on fitting the duration window
++    pattern: Optional[re.Pattern] = None   # extra format-specific signal
++    pattern_w: float = 0.0
++
++
++FORMATS: dict[str, ClipFormat] = {p.id: p for p in [
++    # podcast-punchline: short, punchy, hook-dense
++    ClipFormat("podcast-punchline", "Hook-first clip", 15, 45, 25, 0.38, 0.32, 0.12, 0.18),
++    # hot-take-monologue: mid-length opinion, strong opening hook
++    ClipFormat("hot-take-monologue", "Talking head", 20, 60, 40, 0.30, 0.34, 0.10, 0.26),
++    # story-arc-clip: longer arc; tension/payoff language is the signal
++    ClipFormat("story-arc-clip", "Narrative", 25, 75, 50, 0.24, 0.18, 0.08, 0.20, TENSION_RE, 0.30),
++    # listicle-cuts: numbered segments
++    ClipFormat("listicle-cuts", "Listicle", 15, 50, 30, 0.28, 0.16, 0.08, 0.18, NUMBERED_RE, 0.36),
++    # qa-split: must contain a question mark
++    ClipFormat("qa-split", "Interview", 20, 60, 35, 0.26, 0.18, 0.10, 0.16, QUESTION_RE, 0.30),
++    # b-roll-highlight: fast speech, minimal caption reliance, short
++    ClipFormat("b-roll-highlight", "Montage", 10, 35, 20, 0.44, 0.10, 0.06, 0.10, ACTION_RE, 0.30),
++    # quote-card-clip: quotable phrasing / explicit quotes
++    ClipFormat("quote-card-clip", "Quote", 10, 40, 22, 0.28, 0.22, 0.10, 0.10, QUOTE_RE, 0.30),
++    # countdown-teaser: ends on suspense — questions & exclamations late
++    ClipFormat("countdown-teaser", "Teaser", 15, 45, 28, 0.30, 0.24, 0.16, 0.10, EXCLAIM_RE, 0.20),
++]}
++
+ 
+ @dataclass
+ class Word:
+@@ -41,18 +94,48 @@ class Candidate:
+     hook: str = ""
+     reason: str = ""
+     tone: str = ""
++    format_id: str = ""     # which trending format fits this moment best
+ 
+     @property
+     def duration(self) -> float:
+         return self.end - self.start
+ 
+ 
+-def heuristic_score(text: str, duration: float, n_words: int) -> float:
+-    """0-100. Rewards dense speech, questions/exclamations, and strong hook words early."""
++def _density_words(text: str, duration: float, n_words: int) -> float:
+     if duration <= 0:
+         return 0.0
+     wps = n_words / duration
+-    density = max(0.0, min(1.0, (wps - 1.2) / 2.0))           # ~1.2-3.2 words/sec
++    return max(0.0, min(1.0, (wps - 1.2) / 2.0))
++
++
++def format_score(fmt: ClipFormat, text: str, duration: float, n_words: int) -> float:
++    """0-100 score of a segment under one trending-format profile."""
++    if duration <= 0:
++        return 0.0
++    density = _density_words(text, duration, n_words)
++    lower = text.lower()
++    first = " ".join(lower.split()[:20])
++    hooks = sum(1 for w in HOOK_WORDS if w in first.split())
++    punct = min(3, text.count("?") + text.count("!"))
++    length_fit = 1.0 - min(1.0, abs(duration - fmt.sweet) / max(1.0, fmt.sweet))
++    raw = (
++        fmt.density_w * density
++        + fmt.hook_w * min(1.0, hooks / 2)
++        + fmt.punct_w * (punct / 3)
++        + fmt.length_w * length_fit
++    )
++    if fmt.pattern is not None and fmt.pattern_w > 0:
++        hit = min(2, len(fmt.pattern.findall(text)))
++        raw += fmt.pattern_w * min(1.0, hit / 2)
++    total_w = fmt.density_w + fmt.hook_w + fmt.punct_w + fmt.length_w + fmt.pattern_w
++    return round(35 + 60 * (raw / max(total_w, 0.01)), 1)
++
++
++def heuristic_score(text: str, duration: float, n_words: int) -> float:
++    """0-100 legacy overall score: dense speech, punctuation, early hooks, ~40s."""
++    if duration <= 0:
++        return 0.0
++    density = _density_words(text, duration, n_words)
+     lower = text.lower()
+     first = " ".join(lower.split()[:20])
+     hooks = sum(1 for w in HOOK_WORDS if w in first.split())
+@@ -62,10 +145,30 @@ def heuristic_score(text: str, duration: float, n_words: int) -> float:
+     return round(35 + raw * 60, 1)
+ 
+ 
++def best_format(text: str, duration: float, n_words: int) -> tuple[str, float]:
++    """Highest-scoring trending format for a segment: (format_id, score)."""
++    best_id, best_s = "", -1.0
++    for fid, fmt in FORMATS.items():
++        s = format_score(fmt, text, duration, n_words)
++        if s > best_s:
++            best_id, best_s = fid, s
++    return best_id, best_s
++
++
+ def build_candidates(
+-    segments: list[Segment], min_len: float = 20.0, max_len: float = 60.0
++    segments: list[Segment],
++    min_len: float = 20.0,
++    max_len: float = 60.0,
++    fmt: Optional[ClipFormat] = None,
+ ) -> list[Candidate]:
+-    """Windows that start and end on segment (sentence) boundaries."""
++    """Windows that start and end on segment (sentence) boundaries.
++
++    Pass a ClipFormat (e.g. FORMATS["listicle-cuts"]) to score every window
++    under that trending profile and honour its duration range; leave it None
++    for the legacy all-purpose heuristic plus a best-fit format tag.
++    """
++    lo = fmt.min_len if fmt else min_len
++    hi = fmt.max_len if fmt else max_len
+     out: list[Candidate] = []
+     n = len(segments)
+     for i in range(n):
+@@ -76,12 +179,17 @@ def build_candidates(
+             words.extend(seg.words)
+             texts.append(seg.text.strip())
+             dur = seg.end - segments[i].start
+-            if dur > max_len:
++            if dur > hi:
+                 break
+-            if dur >= min_len:
++            if dur >= lo:
+                 text = " ".join(texts)
+                 c = Candidate(segments[i].start, seg.end, text, list(words))
+-                c.score = heuristic_score(text, dur, len(words))
++                if fmt:
++                    c.score = format_score(fmt, text, dur, len(words))
++                    c.format_id = fmt.id
++                else:
++                    c.score = heuristic_score(text, dur, len(words))
++                    c.format_id, _ = best_format(text, dur, len(words))
+                 out.append(c)
+     return out
+ 
+@@ -99,3 +207,4 @@ def pick_non_overlapping(cands: list[Candidate], k: int, gap: float = 2.0) -> li
+ def fallback_title(text: str, limit: int = 70) -> str:
+     first = text.strip().split(". ")[0].strip()
+     return (first[: limit - 1] + "…") if len(first) > limit else first
++
+diff --git a/worker/cloudnivo_worker/pipeline.py b/worker/cloudnivo_worker/pipeline.py
+index bd5a72c..42c21c6 100644
+--- a/worker/cloudnivo_worker/pipeline.py
++++ b/worker/cloudnivo_worker/pipeline.py
+@@ -12,7 +12,7 @@ from typing import Callable
+ 
+ from . import media
+ from .llm import rank_with_llm
+-from .moments import Candidate, Segment, Word, build_candidates, fallback_title, pick_non_overlapping
++from .moments import Candidate, FORMATS, Segment, Word, build_candidates, fallback_title, pick_non_overlapping
+ 
+ log = logging.getLogger(__name__)
+ 
+@@ -49,6 +49,8 @@ def process(
+     user_id, job_id = job["user_id"], job["id"]
+     max_clips = int(inp.get("max_clips", 6))
+     watermark = bool(inp.get("watermark", True))
++    # Optional trending-format pin (Suite preset id, e.g. "listicle-cuts").
++    fmt = FORMATS.get(str(inp.get("format") or ""))
+ 
+     with tempfile.TemporaryDirectory(prefix="cn-") as tmp:
+         src = str(Path(tmp) / "source")
+@@ -77,7 +79,7 @@ def process(
+         upload(tr_local, f"{user_id}/{job_id}/transcript.json", "application/json")
+ 
+         progress(45, "finding moments")
+-        cands = build_candidates(segments)
++        cands = build_candidates(segments, fmt=fmt)
+         if not cands:  # very short source: use it whole
+             words = [w for s in segments for w in s.words]
+             cands = [Candidate(segments[0].start, segments[-1].end, " ".join(s.text for s in segments), words)]
+@@ -109,8 +111,9 @@ def process(
+                 "end_seconds": int(round(c.end)),
+                 "score": int(round(c.score)),
+                 "title": c.title or fallback_title(c.text),
+-                "hook": c.hook or None,
++                "hook": c.hook or (FORMATS[c.format_id].label if c.format_id in FORMATS else None),
+                 "tone": c.tone or None,
++                "format_id": c.format_id or None,
+                 "why_it_performed": c.reason or None,
+                 "transcript": c.text[:4000],
+                 "crop_x": round(cx, 4),
+diff --git a/worker/tests/test_moments.py b/worker/tests/test_moments.py
+index 0dd5483..63c876c 100644
+--- a/worker/tests/test_moments.py
++++ b/worker/tests/test_moments.py
+@@ -53,3 +53,43 @@ def test_caption_groups_fit_the_frame():
+     groups = caption_groups(words)
+     assert all(sum(len(w.text) + 1 for w in g) - 1 <= 16 or len(g) == 1 for g in groups)
+     assert [w.text for g in groups for w in g] == [w.text for w in words]
++
++
++# ---------------- per-format scoring (mirrors src/suite-data.ts presets) ----------------
++
++def test_formats_mirror_suite_presets():
++    from cloudnivo_worker.moments import FORMATS
++
++    assert set(FORMATS) == {
++        "podcast-punchline", "hot-take-monologue", "story-arc-clip", "listicle-cuts",
++        "qa-split", "b-roll-highlight", "quote-card-clip", "countdown-teaser",
++    }
++
++
++def test_format_score_rewards_its_own_signal():
++    from cloudnivo_worker.moments import FORMATS, format_score
++
++    qa = FORMATS["qa-split"]
++    plain = "people keep doing this thing every single day and nobody talks about it at all really"
++    with_q = "Why does nobody talk about this? Because the answer will surprise you."
++    n = len(with_q.split())
++    assert format_score(qa, with_q, 35, n * 35 // 28) > format_score(qa, plain, 35, len(plain.split()))
++
++
++def test_pinned_format_honours_its_window():
++    from cloudnivo_worker.moments import FORMATS, build_candidates
++
++    segs = [seg(i * 10, i * 10 + 10, "this is a sentence with some words in it") for i in range(12)]
++    cands = build_candidates(segs, fmt=FORMATS["b-roll-highlight"])  # 10-35s window
++    assert cands
++    assert all(10 <= c.duration <= 35 for c in cands)
++    assert all(c.format_id == "b-roll-highlight" for c in cands)
++
++
++def test_best_format_tags_candidates_without_pin():
++    from cloudnivo_worker.moments import build_candidates
++
++    segs = [seg(i * 15, i * 15 + 15, "Top five mistakes? Number one will shock you badly.") for i in range(6)]
++    cands = build_candidates(segs)
++    assert cands
++    assert all(c.format_id for c in cands)
