@@ -53,3 +53,43 @@ def test_caption_groups_fit_the_frame():
     groups = caption_groups(words)
     assert all(sum(len(w.text) + 1 for w in g) - 1 <= 16 or len(g) == 1 for g in groups)
     assert [w.text for g in groups for w in g] == [w.text for w in words]
+
+
+# ---------------- per-format scoring (mirrors src/suite-data.ts presets) ----------------
+
+def test_formats_mirror_suite_presets():
+    from cloudnivo_worker.moments import FORMATS
+
+    assert set(FORMATS) == {
+        "podcast-punchline", "hot-take-monologue", "story-arc-clip", "listicle-cuts",
+        "qa-split", "b-roll-highlight", "quote-card-clip", "countdown-teaser",
+    }
+
+
+def test_format_score_rewards_its_own_signal():
+    from cloudnivo_worker.moments import FORMATS, format_score
+
+    qa = FORMATS["qa-split"]
+    plain = "people keep doing this thing every single day and nobody talks about it at all really"
+    with_q = "Why does nobody talk about this? Because the answer will surprise you."
+    n = len(with_q.split())
+    assert format_score(qa, with_q, 35, n * 35 // 28) > format_score(qa, plain, 35, len(plain.split()))
+
+
+def test_pinned_format_honours_its_window():
+    from cloudnivo_worker.moments import FORMATS, build_candidates
+
+    segs = [seg(i * 10, i * 10 + 10, "this is a sentence with some words in it") for i in range(12)]
+    cands = build_candidates(segs, fmt=FORMATS["b-roll-highlight"])  # 10-35s window
+    assert cands
+    assert all(10 <= c.duration <= 35 for c in cands)
+    assert all(c.format_id == "b-roll-highlight" for c in cands)
+
+
+def test_best_format_tags_candidates_without_pin():
+    from cloudnivo_worker.moments import build_candidates
+
+    segs = [seg(i * 15, i * 15 + 15, "Top five mistakes? Number one will shock you badly.") for i in range(6)]
+    cands = build_candidates(segs)
+    assert cands
+    assert all(c.format_id for c in cands)

@@ -18,3 +18,8 @@ tests/e2e/fixtures/
 
 # wrangler local state
 .wrangler
+
+*.tar.gz
+
+# vendored external clone (rea repo) – not part of this project
+rea/
