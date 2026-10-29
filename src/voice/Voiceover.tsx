@@ -1,6 +1,6 @@
 // Voiceover: type a script, pick a voice, get an MP3. Runs on the Cloudnivo worker (Kokoro).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase, withSignedUrls, type Generation, type Profile } from '../lib/supabase';
+import { deleteGeneration, downloadGeneration, supabase, withSignedUrls, type Generation, type Profile } from '../lib/supabase';
 import { VOICE_MAX_CHARS, voiceCredits } from '../../supabase/functions/_shared/pricing';
 import { LANGUAGES, VOICES, voiceById, type Voice } from './voices';
 import './voice.css';
@@ -254,10 +254,26 @@ export default function Voiceover({
                   </div>
                   <div className="vo-item-actions">
                     {busyRow && g.job_id && <button className="btn btn-outline sm" onClick={() => void cancel(g)}>Cancel</button>}
-                    {g.status === 'ready' && g.result_url && (
-                      <a className="btn btn-outline sm" href={g.result_url} download={`voiceover-${v.name.toLowerCase()}.mp3`} target="_blank" rel="noreferrer">Download</a>
+                    {g.status === 'ready' && g.result_path && (
+                      <button className="btn btn-outline sm" onClick={async () => { if (!(await downloadGeneration(g))) showToast('Could not download. Please try again.'); }}>Download</button>
                     )}
                     <button className="btn btn-ghost sm" onClick={() => reuse(g)}>Reuse</button>
+                    {!busyRow && (
+                      <button
+                        className="btn btn-ghost sm vo-del"
+                        aria-label="Delete"
+                        title="Delete"
+                        onClick={async () => {
+                          if (!confirm('Delete this voiceover? The file is removed for good.')) return;
+                          if (await deleteGeneration(g)) {
+                            setItems((prev) => (prev ?? []).filter((x) => x.id !== g.id));
+                            showToast('Deleted');
+                          } else showToast('Could not delete. Please try again.');
+                        }}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
+                      </button>
+                    )}
                   </div>
                 </li>
               );

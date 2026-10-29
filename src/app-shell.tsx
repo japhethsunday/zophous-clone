@@ -7,7 +7,7 @@ import {
   ensureWorkspace,
   creditCostFor,
   FREE_MODELS,
-  withSignedUrls,
+  withSignedUrls, downloadGeneration, deleteGeneration,
   withSignedClips,
   readVideoDuration,
   type Profile,
@@ -631,8 +631,25 @@ function GenPage({
                 {busyRow && g.job_id && (
                   <button type="button" className="btn btn-outline sm" onClick={cancel}>Cancel</button>
                 )}
-                {g.status === 'ready' && g.result_url && (
-                  <a className="btn btn-outline sm" href={g.result_url} download target="_blank" rel="noreferrer">Download</a>
+                {g.status === 'ready' && g.result_path && (
+                  <button type="button" className="btn btn-outline sm" onClick={async () => { if (!(await downloadGeneration(g))) showToast('Could not download. Please try again.'); }}>Download</button>
+                )}
+                {!busyRow && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost sm gh-del"
+                    aria-label="Delete"
+                    title="Delete"
+                    onClick={async () => {
+                      if (!confirm('Delete this generation? The file is removed for good.')) return;
+                      if (await deleteGeneration(g)) {
+                        setGens((prev) => (prev ?? []).filter((x) => x.id !== g.id));
+                        showToast('Deleted');
+                      } else showToast('Could not delete. Please try again.');
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
+                  </button>
                 )}
               </div>
             </div>

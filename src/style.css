@@ -1702,3 +1702,6 @@ kbd { font: 500 11px/1 var(--font-mono); padding: 2px 5px; border-radius: 4px; b
   font-family: var(--font-sans) !important; font-variant-numeric: tabular-nums; letter-spacing: 0 !important;
 }
 .nav-group { margin: 8px 0 10px; }
+
+.gh-del:hover, .vo-del:hover { color: var(--danger) !important; }
+.gh-del, .vo-del { padding: 6px 8px !important; color: var(--faint); }

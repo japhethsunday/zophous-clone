@@ -105,7 +105,7 @@ export type Post = {
 export type Generation = {
   id: string;
   user_id: string;
-  kind: 'video' | 'image';
+  kind: 'video' | 'image' | 'audio';
   model: string;
   prompt: string;
   format_key: string | null;
@@ -272,4 +272,38 @@ export function readVideoDuration(file: File): Promise<number> {
     el.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read this video file.')); };
     el.src = url;
   });
+}
+
+/** File name for a generation's download, e.g. "cloudnivo-neon-sign-at-night.png". */
+function downloadName(g: Generation): string {
+  const ext = g.result_path?.split('.').pop() ?? (g.kind === 'video' ? 'mp4' : g.kind === 'audio' ? 'mp3' : 'png');
+  const slug = g.prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || g.kind;
+  return `cloudnivo-${slug}.${ext}`;
+}
+
+/** Save a generation to the user's computer. The signed URL asks the browser to download, not open. */
+export async function downloadGeneration(g: Generation): Promise<boolean> {
+  if (!g.result_path) return false;
+  const { data, error } = await supabase.storage.from('outputs').createSignedUrl(g.result_path, 300, { download: downloadName(g) });
+  if (error || !data?.signedUrl) return false;
+  const a = document.createElement('a');
+  a.href = data.signedUrl;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  return true;
+}
+
+/** Delete a finished or failed generation: its files (result + thumbnail) and its row. */
+export async function deleteGeneration(g: Generation): Promise<boolean> {
+  if (g.result_path) {
+    const folder = g.result_path.split('/').slice(0, -1).join('/');
+    const { data: files } = await supabase.storage.from('outputs').list(folder);
+    const paths = (files ?? []).map((f) => `${folder}/${f.name}`);
+    if (paths.length) await supabase.storage.from('outputs').remove(paths);
+    await supabase.from('assets').delete().eq('bucket', 'outputs').in('path', paths.length ? paths : [g.result_path]);
+  }
+  const { error } = await supabase.from('generations').delete().eq('id', g.id);
+  return !error;
 }
