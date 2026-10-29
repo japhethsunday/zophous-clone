@@ -1,4 +1,1 @@
-node_modules/
-dist/
-tsconfig.tsbuildinfo
-.rea-scratch/
+*.tar.gz
