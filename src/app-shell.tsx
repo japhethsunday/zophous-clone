@@ -27,6 +27,9 @@ import {
 const ClipsLibrary = lazy(() => import('./clips/ClipsLibrary'));
 const ClipWorkspace = lazy(() => import('./clips/ClipWorkspace'));
 const HomePage = lazy(() => import('./home'));
+const SuitePage = lazy(() => import('./suite'));
+const AssetsPage = lazy(() => import('./assets-page'));
+const DirectorPage = lazy(() => import('./director'));
 
 /* ---------------- helpers ---------------- */
 
@@ -55,6 +58,12 @@ const IC_PATHS: Record<string, React.ReactNode> = {
     <>
       <path d="M10 3l1.8 4.7L16.5 9.5l-4.7 1.8L10 16l-1.8-4.7L3.5 9.5l4.7-1.8L10 3z" />
       <path d="M18 14l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z" />
+    </>
+  ),
+  layers: (
+    <>
+      <path d="m12 3 9 5-9 5-9-5 9-5z" />
+      <path d="m3 13 9 5 9-5" />
     </>
   ),
   calendar: (
@@ -129,6 +138,9 @@ const EMOTIONS = ['Agree', 'Awkward', 'Funny', 'Hype', 'Shocked'];
 
 type Page =
   | 'home'
+  | 'suite'
+  | 'assets'
+  | 'director'
   | 'clips'
   | 'studio'
   | 'gen'
@@ -634,7 +646,7 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
-  const PAGES: Page[] = ['home', 'clips', 'gen', 'brand', 'settings'];
+  const PAGES: Page[] = ['home', 'suite', 'assets', 'director', 'clips', 'gen', 'brand', 'settings'];
   const pageFromHash = (): Page => {
     const m = location.hash.match(/^#\/app\/([a-z]+)/);
     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
@@ -787,10 +799,15 @@ export default function AppShell() {
             [
               ['', [
                 ['home', 'Dashboard', 'home'],
+                ['suite', 'Suite', 'layers'],
               ]],
               ['Create', [
                 ['clips', 'Clips', 'scissors'],
                 ['gen', 'Generate', 'sparkles'],
+              ]],
+              ['Library', [
+                ['assets', 'Assets', 'film'],
+                ['director', 'Director', 'calendar'],
               ]],
               ['Brand', [
                 ['brand', 'Brand kit', 'diamond'],
@@ -908,6 +925,39 @@ export default function AppShell() {
         {toast && <div className="toast">{toast}</div>}
 
         <Suspense fallback={<div className="page-pad" aria-busy="true" />}>
+        {page === 'suite' && profile && (
+          <SuitePage
+            profile={profile}
+            clips={clips}
+            videos={videos}
+            onNav={(p: Page) => go(p)}
+            onOpenVideo={(id: string) => go('clips', id)}
+            onPrompt={(text: string) => {
+              sessionStorage.setItem('cn_gen_prompt', text);
+              go('gen');
+            }}
+          />
+        )}
+
+        {page === 'assets' && profile && (
+          <AssetsPage
+            clips={clips}
+            videos={videos}
+            onOpenVideo={(id: string) => go('clips', id)}
+            onNav={(p) => go(p)}
+            showToast={showToast}
+          />
+        )}
+
+        {page === 'director' && profile && (
+          <DirectorPage
+            videos={videos}
+            clips={clips}
+            onOpenVideo={(id: string) => go('clips', id)}
+            onBack={() => go('suite')}
+          />
+        )}
+
         {page === 'home' && profile && (
           <HomePage
             profile={profile}

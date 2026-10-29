@@ -1,0 +1,359 @@
+{
+ "title": "AI Creator Studio for Video & Images | OpenArt",
+ "url": "https://openart.ai/suite/home",
+ "metaDesc": "OpenArt Suite is your all-in-one AI creator studio. Create images, videos, characters, and audio in one place. Keep your characters, worlds, and style consistent across creations. Powered by the world\u2019s top models like Google Veo, Kling, Nano Banana Pro, Seedance, and more.",
+ "headings": [
+  {
+   "tag": "H3",
+   "text": "AGENTS"
+  },
+  {
+   "tag": "H3",
+   "text": "TOOLS"
+  },
+  {
+   "tag": "H3",
+   "text": "ASSETS"
+  },
+  {
+   "tag": "H3",
+   "text": "INSPIRE"
+  },
+  {
+   "tag": "H3",
+   "text": "PINNED TOOLS"
+  },
+  {
+   "tag": "H1",
+   "text": "What are we making today?"
+  },
+  {
+   "tag": "H2",
+   "text": "Direct Your Video"
+  },
+  {
+   "tag": "H2",
+   "text": "What's New?"
+  },
+  {
+   "tag": "H2",
+   "text": "Viral Seedance 2.5 Presets"
+  },
+  {
+   "tag": "H2",
+   "text": "Get Started with Tools"
+  },
+  {
+   "tag": "H2",
+   "text": "Latest AI Models"
+  },
+  {
+   "tag": "H2",
+   "text": "Inspirations"
+  },
+  {
+   "tag": "H3",
+   "text": "Marketing and Advertising"
+  },
+  {
+   "tag": "H3",
+   "text": "Film & Stories"
+  },
+  {
+   "tag": "H3",
+   "text": "Music Video"
+  },
+  {
+   "tag": "H3",
+   "text": "Animation & Illustration"
+  },
+  {
+   "tag": "H3",
+   "text": "UGC"
+  },
+  {
+   "tag": "H3",
+   "text": "Micro Drama"
+  },
+  {
+   "tag": "H3",
+   "text": "Anime"
+  },
+  {
+   "tag": "H3",
+   "text": "Explainer"
+  },
+  {
+   "tag": "H2",
+   "text": "Sign-up and receive your FREE credits"
+  }
+ ],
+ "links": [
+  {
+   "href": "/suite/home",
+   "text": "Home"
+  },
+  {
+   "href": "/suite/chat",
+   "text": "Chat Mode\nChat to create anything"
+  },
+  {
+   "href": "/suite/director",
+   "text": "Director Mode\nFull film / long video"
+  },
+  {
+   "href": "/suite/create-video",
+   "text": "Video"
+  },
+  {
+   "href": "/suite/create-image",
+   "text": "Image"
+  },
+  {
+   "href": "/suite/world",
+   "text": "World"
+  },
+  {
+   "href": "/suite/character",
+   "text": "Character"
+  },
+  {
+   "href": "/suite/create-voice-over",
+   "text": "Audio"
+  },
+  {
+   "href": "https://openart.ai/mcp",
+   "text": "MCP / CLI\n10% Off"
+  },
+  {
+   "href": "/suite/director/projects",
+   "text": "Director Projects"
+  },
+  {
+   "href": "/suite/characters-and-worlds",
+   "text": "Character & World"
+  },
+  {
+   "href": "/suite/brand-kit",
+   "text": "Brand kit"
+  },
+  {
+   "href": "/suite/media",
+   "text": "Media"
+  },
+  {
+   "href": "/suite/inspire/feed",
+   "text": "Templates"
+  },
+  {
+   "href": "https://openart.ai/arena?utm_source=openart&utm_medium=internal&utm_campaign=sidebar",
+   "text": "Arena\nNew"
+  },
+  {
+   "href": "/suite/tutorials",
+   "text": "Tutorials"
+  },
+  {
+   "href": "https://openart.ai/blog/",
+   "text": "Blog"
+  },
+  {
+   "href": "https://openart.ai/enterprise/",
+   "text": "Enterprise"
+  },
+  {
+   "href": "https://openart.ai/mcp",
+   "text": "Set up MCP / CLI \u2197"
+  },
+  {
+   "href": "/suite/ip-safety-check",
+   "text": "Try Now"
+  },
+  {
+   "href": "/suite/create-video/byte-plus-seedance-2-5",
+   "text": "Create Now"
+  },
+  {
+   "href": "/suite/extract-layers",
+   "text": "Try Now"
+  },
+  {
+   "href": "/suite/home/templates/xO0NhNcxHUAfl48ffNiW",
+   "text": "Seedance 2.5\nUse\nMidnight Lobby"
+  },
+  {
+   "href": "/suite/home/templates/RxrW4pOX6sdR3Cs5Yic8",
+   "text": "Seedance 2.5\nUse\nSpooky, scary skelet"
+  },
+  {
+   "href": "/suite/home/templates/eQjAjZgrFxlKdwAMN2SY",
+   "text": "Seedance 2.0\nUse\nScare to Selfie"
+  },
+  {
+   "href": "/suite/home/templates/wxkSkHxXdtAQNYtSDCHh",
+   "text": "Seedance 2.5\nUse\nTrick-or-Treat Paws"
+  },
+  {
+   "href": "/suite/home/templates/a9jH2BCkU9UfHXyjGooL",
+   "text": "Seedance 2.5\nUse\nHalloween Fan Transition"
+  },
+  {
+   "href": "/suite/home/templates/VyP4HYMMp7EWkbIqdGmv",
+   "text": "Seedance 2.5\nUse\nStorm"
+  },
+  {
+   "href": "/suite/home/templates/7m8awqZcBnFda9CbacCd",
+   "text": "Seedance 2.5\nUse\nThe Roasting Drill Sergeant"
+  },
+  {
+   "href": "/suite/home/templates/LVKzLYyh9oBRaN7hxPjf",
+   "text": "Seedance 2.5\nUse\nKing of the Party"
+  },
+  {
+   "href": "/suite/home/templates/vYqwMD4vZNiiPkVIJReO",
+   "text": "Seedance 2.5\nUse\nDoctor Sitcom"
+  },
+  {
+   "href": "/suite/home/templates/87g1M4GZGsY03osuZPtz",
+   "text": "Seedance 2.5\nUse\nSuperhero Sighting"
+  },
+  {
+   "href": "/suite/home/templates/B47SVafONVzlJ8py4SqS",
+   "text": "Seedance 2.5\nUse\nThe Witch's Potions of Desire"
+  },
+  {
+   "href": "/suite/home/templates/9U3o5quBU1c7NotJsOwj",
+   "text": "Seedance 2.5\nUse\nQuiz Gameshow"
+  },
+  {
+   "href": "/suite/home/templates/2CbnEqzadiY81axAeib2",
+   "text": "Seedance 2.5\nUse\nThe Coconut Climber"
+  },
+  {
+   "href": "/suite/home/templates/uLbQRd3BkOj7JESeej6s",
+   "text": "Seedance 2.5\nUse\nSidewalk Collision"
+  },
+  {
+   "href": "/suite/home/feed/viral-templates",
+   "text": "View All"
+  },
+  {
+   "href": "/suite/smart-shot",
+   "text": "Smart Shot\nStoryboard sheet + cinematic video"
+  },
+  {
+   "href": "/suite/extract-layers",
+   "text": "Extract layers\nNEW\nSeparate an image into editable layers"
+  },
+  {
+   "href": "/suite/dub-video",
+   "text": "Dub Video\nNEW\nDub your video into 24 languages with optional"
+  },
+  {
+   "href": "/suite/ip-safety-check",
+   "text": "IP Safety Check\nNEW\nCheck an image or video for IP matches"
+  },
+  {
+   "href": "/suite/replace-background",
+   "text": "Replace Background\nSwap the scene behind your subject"
+  },
+  {
+   "href": "/suite/relight-video",
+   "text": "Relight Video\nRelight a video to match a reference look"
+  },
+  {
+   "href": "/suite/motion-sync",
+   "text": "Motion Sync\nSync motion from a reference video"
+  },
+  {
+   "href": "/suite/lip-sync",
+   "text": "Lip-Sync\nLip-sync videos from audio and image"
+  },
+  {
+   "href": "/suite/modify-video",
+   "text": "Edit Video\nModify or retake videos (Kling O1, LTX-2)"
+  },
+  {
+   "href": "/suite/inspire/feed/marketing-advertising",
+   "text": "See all"
+  },
+  {
+   "href": "/suite/inspire/feed/film",
+   "text": "See all"
+  },
+  {
+   "href": "/suite/inspire/feed/music",
+   "text": "See all"
+  },
+  {
+   "href": "/suite/inspire/feed/animation-illustration",
+   "text": "See all"
+  },
+  {
+   "href": "/suite/inspire/feed/ads",
+   "text": "See all"
+  },
+  {
+   "href": "/suite/inspire/feed/micro-drama",
+   "text": "See all"
+  },
+  {
+   "href": "/suite/inspire/feed/anime",
+   "text": "See all"
+  },
+  {
+   "href": "/suite/inspire/feed/explainer",
+   "text": "See all"
+  }
+ ],
+ "buttons": [
+  "Upgrade now",
+  "AGENTS",
+  "TOOLS",
+  "ASSETS",
+  "INSPIRE",
+  "PINNED TOOLS",
+  "Follow us",
+  "Pricing",
+  "Login",
+  "Start for Free",
+  "Agents",
+  "Tools",
+  "Reveal My Treat",
+  "Chat Mode",
+  "GPT 5.6 Luna",
+  "Ask first",
+  "Create product ads",
+  "Design a film poster",
+  "Music for my film",
+  "More",
+  "More \u2192",
+  "New Launch Video",
+  "Short Film",
+  "New Music Video",
+  "Real Estate",
+  "Product Ads",
+  "Ad Remake",
+  "Social Content",
+  "UGC Ads",
+  "Micro Drama",
+  "Brand Film",
+  "Explainer",
+  "Film Trailer",
+  "Upgrade Now",
+  "Limited time",
+  "Marketing and Advertising",
+  "Film & Stories",
+  "Music Video",
+  "Animation & Illustration",
+  "UGC",
+  "Anime",
+  "Sign in",
+  "Sign in with Google",
+  "Sign in with Apple",
+  "Sign in with Discord",
+  "Sign in with Twitter",
+  "Continue"
+ ],
+ "bodyText": "Enjoy 50% off Kling 4.0 when you upgrade to Pro or Wonder, valid through Nov 20.\nUpgrade now\nHome\nAGENTS\nChat Mode\nChat to create anything\nDirector Mode\nFull film / long video\nTOOLS\nVideo\nImage\nWorld\nCharacter\nAudio\nMCP / CLI\n10% Off\nASSETS\nDirector Projects\nCharacter & World\nBrand kit\nMedia\nINSPIRE\nTemplates\nArena\nNew\nTutorials\nBlog\nPINNED TOOLS\nFollow us\nEnterprise\nPricing\nLogin\nStart for Free\nWhat are we making today?\nYour studio, your controls\nAgents\nTools\n\nYour Halloween treat is waiting\n\n03\nd\n12\nh\n17\nm\n05\ns\nReveal My Treat\nA vertical\n\n\n\n\nChat Mode\nGPT 5.6 Luna\nAsk first\nCreate product ads\nDesign a film poster\nMusic for my film\nMore\nCreate images & videos in your AI agent\nSet up MCP / CLI \u2197\nDirect Your Video\nMore \u2192\nNew\nLaunch Video\nShort Film\nNew\nMusic Video\nReal Estate\nProduct Ads\nAd Remake\nSocial Content\nUGC Ads\nMicro Drama\nBrand Film\nExplainer\nFilm Trailer\nWhat's New?\nTry Now\n\nIP Safety Check: Scan for potential copyright issues\n\nUpgrade Now\n\n50% Off Kling 4 Until Nov 20.\n\nLimited time\n\nHalloween surprise is waiting\n\nCreate Now\n\nSeedance 2.5 : 30s videos. Frame level editing. Highest Detail\n\nTry Now\n\nExtract Layers: Split flat images into editable parts\n\nUpgrade Now\n\nUnlimited Flux 3 video until October 31\n\nViral Seedance 2.5 Presets\nMore \u2192\nSeedance 2.5\nUse\nMidnight Lobby\nSeedance 2.5\nUse\nSpooky, scary skelet\nSeedance 2.0\nUse\nScare to Selfie\nSeedance 2.5\nUse\nTrick-or-Treat Paws\nSeedance 2.5\nUse\nHalloween Fan Transition\nSeedance 2.5\nUse\nStorm\nSeedance 2.5\nUse\nThe Roasting Drill Sergeant\nSeedance 2.5\nUse\nKing of the Party\nSeedance 2.5\nUse\nDoctor Sitcom\nSeedance 2.5\nUse\nSuperhero Sighting\nSeedance 2.5\nUse\nThe Witch's Potions of Desire\nSeedance 2.5\nUse\nQuiz Gameshow\nSeedance 2.5\nUse\nThe Coconut Climber\nSeedance 2.5\nUse\nSidewalk Collision\nView All\nGet Started with Tools\nMore \u2192\nSmart Shot\nStoryboard sheet + cinematic video\nExtract layers\nNEW\nSeparate an image into editable layers\nDub Video\nNEW\nDub your video into 24 languages with optional lip sync\nIP Safety Check\nNEW\nCheck an image or video for IP matches\nReplace Background\nSwap the scene behind your subject\nRelight Video\nRelight a video to match a reference look\nMotion Sync\nSync motion from a reference video\nLip-Sync\nLip-sync videos from audio and image\nEdit Video\nModify or retake videos (Kling O1, LTX-2)\nLatest AI Models\nMore \u2192\nKling 4\nKling 4\n\nConsistent characters, precise camera moves, and targeted video edits.\n\nSeedance 2.5\nSeedance 2.5\n\n30s videos. Frame level editing. Highest Details\n\nNano Banana 2.1\nNano Banana 2.1\n\nMore realistic, detailed, and faster image creation\n\nGPT Image 2.5\nGPT Image 2.5\n\nFast, smart, and multi-turn editing consistency\n\nInspirations\nMarketing and Advertising\nFilm & Stories\nMusic Video\nAnimation & Illustration\nUGC\nMicro Drama\nAnime\nExplainer\nMarketing and Advertising\n\nCampaign clips, product shots, and style visuals for brands and sellers\n\nSee all\nFilm & Stories\n\nCinematic scenes, stills, and storyboards\n\nSee all\nMusic Video\n\nVisualizers, lyric videos, and album art\n\nSee all\nAnimation & Illustration\n\nCharacter-driven stories, anime, illustration, and 3D art\n\nSee all\nUGC\n\nAI Influencer, UGC, Social Media Content\n\nSee all\nMicro Drama\n\nIntense melodrama, shocking twists, and cliffhangers\n\nSee all\nAnime\n\nAnime-style portraits and videos, characters\n\nSee all\nExplainer\n\nVideos to explain a product, service or a concept\n\nSee all\nSign-up and receive your FREE credits\n\nAlready have an account? Sign in\nSign in with Google\nSign in with Apple\nSign in with Discord\nSign in with Twitter\nOr use email to sign up\nEmail\nPassword\nConfirm Password\nContinue"
+}
