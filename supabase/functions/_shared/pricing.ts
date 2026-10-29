@@ -20,6 +20,8 @@ export const FREE_MODELS: Record<string, { kind: MediaKind; credits: number; nam
   // Cloudflare Workers AI free tier (falls back to FLUX on Hugging Face when Cloudflare isn't configured).
   'flux-schnell-cf': { kind: 'image', credits: 1, name: 'FLUX schnell, fast (free)' },
   'lucid-origin-cf': { kind: 'image', credits: 2, name: 'Lucid Origin (free)' },
+  // Through OmniRoute on the worker PC (Gemini image via Antigravity, no provider bill).
+  'gemini-image-or': { kind: 'image', credits: 2, name: 'Gemini Image' },
 };
 
 export function clampVideoSeconds(n: unknown): number {

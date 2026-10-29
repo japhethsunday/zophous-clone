@@ -76,6 +76,11 @@ def run_generation_job(db: Supa, job: dict) -> None:
                 name, mime = "voice.mp3", "audio/mpeg"
                 extra = {"duration_seconds": max(1, round(seconds)),
                          "meta": {"voice": inp.get("voice"), "speed": inp.get("speed"), "seconds": round(seconds, 1)}}
+            elif inp.get("kind") == "image" and str(inp.get("model", "")).endswith("-or"):
+                from .omniroute import make_image as or_image
+
+                path = or_image(inp["model"], inp["prompt"], inp.get("aspect", "9:16"), tmp)
+                name, mime = "image" + os.path.splitext(path)[1], "image/png" if path.endswith(".png") else "image/jpeg"
             elif inp.get("kind") == "image" and str(inp.get("model", "")).endswith("-cf") and _cf_enabled():
                 from .cloudflare_ai import make_image as cf_image
 

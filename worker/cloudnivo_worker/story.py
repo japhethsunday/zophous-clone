@@ -48,6 +48,19 @@ Reply with JSON only:
 def write_script(topic: str, tone: str, seconds: int) -> dict:
     n = max(3, min(10, round(seconds / 10)))
     prompt = SCRIPT_PROMPT.format(topic=topic, tone=tone, seconds=seconds, words=int(seconds * 2.4), n=n)
+    from . import omniroute
+    data = None
+    if omniroute.enabled():
+        try:
+            data = omniroute.chat_json(prompt, temperature=0.8)
+        except Exception:  # noqa: BLE001
+            data = None
+    if data is None:
+        data = _ollama_script(prompt)
+    return _clean_script(data, topic)
+
+
+def _ollama_script(prompt: str) -> dict:
     r = requests.post(
         f"{OLLAMA_URL}/api/generate",
         json={"model": OLLAMA_MODEL, "prompt": prompt, "format": "json", "stream": False,
@@ -55,7 +68,10 @@ def write_script(topic: str, tone: str, seconds: int) -> dict:
         timeout=600,
     )
     r.raise_for_status()
-    data = json.loads(r.json().get("response", "{}"))
+    return json.loads(r.json().get("response", "{}"))
+
+
+def _clean_script(data: dict, topic: str) -> dict:
     scenes = [s for s in data.get("scenes", []) if str(s.get("narration", "")).strip()]
     if not scenes:
         raise ValueError("script_generation_failed")

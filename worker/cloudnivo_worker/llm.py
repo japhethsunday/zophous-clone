@@ -30,12 +30,19 @@ Candidates:
 
 
 def rank_with_llm(cands: list[Candidate], timeout: int = 240) -> list[Candidate]:
-    """Cloudflare Workers AI first (free tier), then local Ollama, else keep the heuristic."""
+    """OmniRoute first, then Cloudflare Workers AI, then local Ollama, else keep the heuristic."""
     if not cands:
         return cands
     lines = [f"[{i}] ({c.duration:.0f}s) {c.text[:700]}" for i, c in enumerate(cands)]
-    from . import cloudflare_ai
+    from . import cloudflare_ai, omniroute
 
+    if omniroute.enabled():
+        try:
+            data = omniroute.chat_json(PROMPT + "\n".join(lines), temperature=0.2)
+            log.info("ranked with OmniRoute")
+            return _apply(cands, data)
+        except Exception as e:  # noqa: BLE001
+            log.warning("OmniRoute ranking failed, trying Cloudflare/Ollama: %s", e)
     if cloudflare_ai.enabled():
         try:
             data = cloudflare_ai.chat_json(PROMPT + "\n".join(lines))
