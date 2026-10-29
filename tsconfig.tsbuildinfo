@@ -1,0 +1,1 @@
+{"root":["./src/app-shell.tsx","./src/home.tsx","./src/landing.tsx","./src/main.tsx","./src/suite.tsx","./src/vite-env.d.ts","./src/clips/ClipWorkspace.tsx","./src/clips/ClipsLibrary.tsx","./src/clips/captions.ts","./src/lib/supabase.ts","./src/lib/uploads.ts"],"version":"5.9.3"}

@@ -12,7 +12,7 @@ from typing import Callable
 
 from . import media
 from .llm import rank_with_llm
-from .moments import Candidate, Segment, Word, build_candidates, fallback_title, pick_non_overlapping
+from .moments import Candidate, FORMATS, Segment, Word, build_candidates, fallback_title, pick_non_overlapping
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +49,8 @@ def process(
     user_id, job_id = job["user_id"], job["id"]
     max_clips = int(inp.get("max_clips", 6))
     watermark = bool(inp.get("watermark", True))
+    # Optional trending-format pin (Suite preset id, e.g. "listicle-cuts").
+    fmt = FORMATS.get(str(inp.get("format") or ""))
 
     with tempfile.TemporaryDirectory(prefix="cn-") as tmp:
         src = str(Path(tmp) / "source")
@@ -77,7 +79,7 @@ def process(
         upload(tr_local, f"{user_id}/{job_id}/transcript.json", "application/json")
 
         progress(45, "finding moments")
-        cands = build_candidates(segments)
+        cands = build_candidates(segments, fmt=fmt)
         if not cands:  # very short source: use it whole
             words = [w for s in segments for w in s.words]
             cands = [Candidate(segments[0].start, segments[-1].end, " ".join(s.text for s in segments), words)]
@@ -109,8 +111,9 @@ def process(
                 "end_seconds": int(round(c.end)),
                 "score": int(round(c.score)),
                 "title": c.title or fallback_title(c.text),
-                "hook": c.hook or None,
+                "hook": c.hook or (FORMATS[c.format_id].label if c.format_id in FORMATS else None),
                 "tone": c.tone or None,
+                "format_id": c.format_id or None,
                 "why_it_performed": c.reason or None,
                 "transcript": c.text[:4000],
                 "crop_x": round(cx, 4),
