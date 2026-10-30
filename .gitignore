@@ -21,5 +21,6 @@ tests/e2e/fixtures/
 
 *.tar.gz
 
-# vendored external clone (rea repo) – not part of this project
-rea/
+# vendored external clone (rea repo) – not part of this project (root only;
+# tools/rea and docs/research/rea are ours and MUST stay tracked)
+/rea/
