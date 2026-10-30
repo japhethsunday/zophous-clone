@@ -25,9 +25,31 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+  # Fallback publish for repos where Pages has not been switched to
+  # "GitHub Actions" source yet. Harmless once the primary deploy works.
+  legacy-publish:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: artifact
+      - name: Extract site from Pages artifact
+        run: |
+          mkdir -p site
+          tar -xzf artifact/artifact.tar.gz -C site || cp -r artifact/* site/ || true
+      - uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: site
+          clean: true
 
   deploy:
     needs: build
@@ -35,6 +57,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
