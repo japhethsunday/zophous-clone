@@ -32,6 +32,7 @@ const Voiceover = lazy(() => import('./voice/Voiceover'));
 const SuitePage = lazy(() => import('./suite'));
 const AssetsPage = lazy(() => import('./assets-page'));
 const DirectorPage = lazy(() => import('./director'));
+const OpenArtPage = lazy(() => import('./open-art'));
 
 /* ---------------- helpers ---------------- */
 
@@ -150,6 +151,7 @@ type Page =
   | 'suite'
   | 'assets'
   | 'director'
+  | 'openart'
   | 'clips'
   | 'studio'
   | 'gen'
@@ -676,7 +678,7 @@ function GenPage({
 /* ---------------- main shell ---------------- */
 
 export default function AppShell() {
-  const PAGES: Page[] = ['home', 'suite', 'assets', 'director', 'clips', 'studio', 'gen', 'voice', 'brand', 'settings'];
+  const PAGES: Page[] = ['home', 'suite', 'assets', 'director', 'openart', 'clips', 'studio', 'gen', 'voice', 'brand', 'settings'];
   const pageFromHash = (): Page => {
     const m = location.hash.match(/^#\/app\/([a-z]+)/);
     return m && (PAGES as string[]).includes(m[1]) ? (m[1] as Page) : 'home';
@@ -838,6 +840,7 @@ export default function AppShell() {
                 ['clips', 'Clips', 'scissors'],
                 ['assets', 'Assets', 'layers'],
                 ['director', 'Director', 'film'],
+                ['openart', 'Open Art', 'palette'],
                 ['studio', 'Studio', 'sparkles'],
                 ['gen', 'Video & story', 'film'],
                 ['voice', 'Voiceover', 'mic'],
@@ -989,6 +992,10 @@ export default function AppShell() {
             onOpenVideo={(id) => go('clips', id)}
             onBack={() => go('suite')}
           />
+        )}
+
+        {page === 'openart' && profile && (
+          <OpenArtPage onBack={() => go('suite')} />
         )}
 
         {page === 'home' && profile && (
