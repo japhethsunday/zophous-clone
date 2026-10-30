@@ -1,0 +1,553 @@
+{
+  "generated_from": "rea 6.8.0 vendored clone (morluto/rea)",
+  "domain": "open-art web cloning",
+  "stages": [
+    {
+      "id": "discover",
+      "purpose": "Find every page target at the CDP endpoint",
+      "tools": [
+        {
+          "tool": "list_browser_targets",
+          "cli": "list-browser-targets",
+          "description": "List page targets exposed by the selected loopback Chrome DevTools Protocol endpoint. Optionally filter by exact origin. URLs preserve query values and fragments; only URL userinfo credentials are removed. HTTP discovery and browser-socket discovery use the fixed 10-second discovery deadline, then the socket closes without a later command. This operation accepts no command_timeout_ms; that listing deadline has no runtime override.",
+          "required_inputs": [
+            "cdp_endpoint"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "cdp_endpoint"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "capture-passive",
+      "purpose": "Passively snapshot DOM, a11y, scripts, resources, network metadata; include script bytes with --include-script-sources",
+      "tools": [
+        {
+          "tool": "inspect_web_page",
+          "cli": "inspect-web-page",
+          "description": "Passively inspect one selected page target through CDP without evaluating JavaScript, navigating, clicking, closing, or mutating the page. If no origin filter is supplied, capture is scoped to the target's current origin. Returns DOM structure, accessibility, scripts, resources, attach-window network and console metadata, workers, and redacted storage inventory as Evidence.",
+          "required_inputs": [
+            "cdp_endpoint",
+            "target_id"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "cdp_endpoint",
+            "command_timeout_ms",
+            "include_accessibility_text",
+            "include_console_text",
+            "include_json_body_shapes",
+            "include_script_sources",
+            "include_storage_fingerprints",
+            "include_storage_keys",
+            "include_websocket_shapes",
+            "observation_ms",
+            "target_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "capture-scenario",
+      "purpose": "Run declared interactions (click/type/wait) and capture DOM/screenshots/network/storage",
+      "tools": [
+        {
+          "tool": "capture_browser_scenario",
+          "cli": "capture-browser-scenario",
+          "description": "Run a controlled browser scenario when passive observation cannot exercise the application. Launch the selected executable or connect to a loopback CDP target, provide a start URL and actions, and select storage or artifacts when needed. A request action sends one HTTP request to the start origin through the page's own fetch, with header values from secrets, page cookies or local storage; write methods change application state. Environment, empty storage, a URL-only final capture, and measured event-retention budgets are defaults. capture.network selects request_body, response_body, and header_values independently; capture.limits lets callers raise or lower the event count, retained-allocation estimates, network transaction count, and network content budgets. Selected content is returned inline with transaction and event references, byte digests, and explicit unavailable states. Budget omissions identify affected event kinds and network transactions. Credentials and declared secrets are redacted. Agents can run their own local fixture servers to control application responses. Actions run until completion or cancellation unless timeout_ms is set. Default detail complete returns the capture inline. Detail summary retains complete Evidence and returns step outcomes, the final or first unsuccessful step\u2019s accessibility tree, and event/network counts. Read exact steps with selected artifacts, UTF-16 text pages, transactions with opt-in content, or events filtered by step, kind and transaction, through inspect_analysis_view kind browser-scenario.",
+          "required_inputs": [
+            "browser",
+            "start_url",
+            "actions"
+          ],
+          "input_properties": [
+            "actions",
+            "browser",
+            "capture",
+            "command_timeout_ms",
+            "detail",
+            "environment",
+            "secrets",
+            "start_url",
+            "storage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "observe-session",
+      "purpose": "Arm a window while a human operates the page: navigations, redirects, lifecycle",
+      "tools": [
+        {
+          "tool": "observe_web_session",
+          "cli": "observe-web-session",
+          "description": "Arm a CDP observation window of the requested duration while the user operates the page. By default it follows the selected target's current origin; an explicit origin list controls which origins may be retained. Records navigation, redirect, lifecycle, and failure events.",
+          "required_inputs": [
+            "cdp_endpoint",
+            "target_id"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "cdp_endpoint",
+            "command_timeout_ms",
+            "observation_ms",
+            "target_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "observe-execution",
+      "purpose": "Record executed script locations and execution contexts via Debugger domain",
+      "tools": [
+        {
+          "tool": "observe_web_execution",
+          "cli": "observe-web-execution",
+          "description": "Instrument one selected CDP page for a finite, externally driven precise coverage window. Resets execution counters and prevents optimized execution until stopped. Returns complete nested UTF-16 ranges/counts, independently hashed script text and request initiator associations by session script ID. Does not navigate, click, evaluate selected code or close the externally owned page. Navigation ends document-scoped collection; workers and UI causality remain outside this claim. Emits an actual armed progress notification before external actions.",
+          "required_inputs": [
+            "cdp_endpoint",
+            "target_id"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "cdp_endpoint",
+            "command_timeout_ms",
+            "observation_ms",
+            "target_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "analyze-bundle",
+      "purpose": "Parse captured scripts without execution: chunk edges, route inventory, endpoint candidates, vendor fingerprints, WebMCP declarations, source-map evidence",
+      "tools": [
+        {
+          "tool": "analyze_web_bundle",
+          "cli": "analyze-web-bundle",
+          "description": "Capture JavaScript source from one selected CDP page and statically derive a chunk graph, route and endpoint candidates, vendor fingerprints, page-declared WebMCP metadata, and optionally fetch source maps from the selected target origin or explicitly requested origins. JavaScript is parsed but never executed. Select detail summary with a web-bundle view for filtered endpoint observations, inferences or counts, or a javascript-routes view for route patterns, occurrences, sources, unknowns or counts. Complete Evidence remains retained for later views. Static candidates do not establish reachability or a complete application route denominator.",
+          "required_inputs": [
+            "cdp_endpoint",
+            "target_id"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "analysis_timeout_ms",
+            "cdp_endpoint",
+            "command_timeout_ms",
+            "detail",
+            "fetch_source_maps",
+            "include_accessibility_text",
+            "include_console_text",
+            "include_json_body_shapes",
+            "include_script_sources",
+            "include_storage_fingerprints",
+            "include_storage_keys",
+            "include_websocket_shapes",
+            "max_heap_mb",
+            "observation_ms",
+            "source_map_fetch_timeout_ms",
+            "target_id",
+            "total_analysis_timeout_ms",
+            "view"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "export-scripts",
+      "purpose": "Write digest-verified script files + manifest from a saved capture",
+      "tools": [
+        {
+          "tool": "export_web_scripts",
+          "cli": "export-web-scripts",
+          "description": "Export JavaScript bytes already retained in one local inspect_web_page or capture_browser_scenario JSON capture (normalized result or complete Evidence). Writes scripts and a digest-verified manifest into an absent absolute output_directory. Returns all source URLs, script or transaction/event references, unavailable states, and an analysis_input for analyze_javascript_application when any bytes were exported. Include script sources in inspect_web_page or select capture.network.response_body in scenarios. No refetch or execution. Safe unambiguous URL layouts preserve relative module paths; versions, query variants, inline scripts, and path collisions are isolated with explicit resolution limitations.",
+          "required_inputs": [
+            "capture_path",
+            "output_directory"
+          ],
+          "input_properties": [
+            "capture_path",
+            "output_directory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-imports",
+      "purpose": "Resolve one exported script's native ES imports under an explicit URL/import-map context",
+      "tools": [
+        {
+          "tool": "trace_web_module_imports",
+          "cli": "trace-web-module-imports",
+          "description": "Trace one exported website script's outgoing native ES imports/re-exports, using exact URL and optional selected import-map context. Reads a local export_web_scripts manifest and verifies the selected source's SHA-256/size; returns source positions, native resolved URLs or exact errors, every matching captured candidate and explicit unknown execution. Query/fragment identities are preserved. Computed imports and bundler IDs remain unknown. Select importer_url for unknown inline/document-base context. Caller-supplied Chromium executes only a trusted REA resolver stub in an owned context with page requests locally fulfilled/blocked; no captured application execution or asset refetch. Requires absolute REA_BROWSER_EXECUTABLE for literal imports. 32 MiB manifest, 16 MiB source, 4 MiB map and 20-second native deadline; cleanup may extend the deadline.",
+          "required_inputs": [
+            "manifest_path",
+            "script_index"
+          ],
+          "input_properties": [
+            "import_map",
+            "importer_url",
+            "manifest_path",
+            "script_index"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "recover-sources",
+      "purpose": "Rebuild readable modules from bundles using Wakaru (formatting/sourcemap aware)",
+      "tools": [
+        {
+          "tool": "recover_javascript_sources",
+          "cli": "recover-javascript-sources",
+          "description": "Recover readable modules from local UTF-8 JavaScript scripts/bundles into an absent directory, using caller-supplied Wakaru ^1.13.0 (verified with 1.14.0) on Linux x64. Use additional_paths for related chunks; each input retains its own snapshot and provenance. Returns original/derived digests, extraction byte ranges, emitted source maps, warnings and analysis_input inline. Structural splitting may fall back to one module; original names and runtime equivalence remain unknown. No application code execution. Requires util-linux prlimit; one worker, 1 GiB address-space ceiling, 120-second deadline, 64 MiB total input, 128 MiB output, 10000 entries and 8 MiB per diagnostic/report stream.",
+          "required_inputs": [
+            "path",
+            "output_directory"
+          ],
+          "input_properties": [
+            "additional_paths",
+            "extraction_mode",
+            "output_directory",
+            "path",
+            "rewrite_level"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "static-graph",
+      "purpose": "Full application graph from a local dir/ASAR: nodes, edges, semantics, integrity, coverage",
+      "tools": [
+        {
+          "tool": "analyze_javascript_application",
+          "cli": "analyze-javascript-application",
+          "description": "Reconstruct one local ASAR or extracted JavaScript application as an inline application graph without executing it. Returns recovered graph nodes, edges, semantic relations, integrity contradictions, limitations, and coverage. Select source_paths to acquire and analyze only exact inventoried file paths; the complete artifact inventory and identity remain intact, and unselected sources remain explicit unknowns. Dependencies are not implicitly analyzed. Select detail summary to retain the complete analysis Evidence in this session and receive only its summary view, then inspect selected modules or pages with inspect_analysis_view. Select a javascript-routes view with summary detail to query deduplicated static patterns, source-linked occurrences, source status or interpretation gaps with filters, fields and paging. Static routes do not establish reachability or the full application route set. Summary detail reduces delivery, whereas source_paths bounds source analysis. Integrity mismatches fail by default; record-and-continue retains observed bytes as untrusted and marks graph coverage partial. Timeout recovery: returned provider_timeout uses the per-source analysis_timeout_ms budget. A host-only 'timed out awaiting tools/call' needs a longer client tool deadline, not a larger analysis_timeout_ms. Never repeat the unchanged call to test whether that timeout persists; report the host setting if configuration is not editable (Codex: mcp_servers.<server>.tool_timeout_sec, seconds).",
+          "required_inputs": [
+            "input_path"
+          ],
+          "input_properties": [
+            "analysis_timeout_ms",
+            "detail",
+            "format",
+            "input_path",
+            "integrity_policy",
+            "max_heap_mb",
+            "max_semantic_nodes",
+            "max_semantic_nodes_per_file",
+            "max_semantic_unknowns",
+            "max_semantic_unknowns_per_file",
+            "source_paths",
+            "view"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-feature",
+      "purpose": "Trace a typed seed (route/string/API/module) through the authenticated graph",
+      "tools": [
+        {
+          "tool": "trace_application_feature",
+          "cli": "trace-application-feature",
+          "description": "Trace a typed literal seed through every reachable part of an authenticated JavaScript Application Graph supplied as inline Evidence or exact same-session retained references. Original static, native, passive-runtime, inferred, and unknown authorities remain distinct; native addon handoffs never open a provider or execute the application.",
+          "required_inputs": [
+            "seed",
+            "application"
+          ],
+          "input_properties": [
+            "application",
+            "direction",
+            "native_observations",
+            "seed",
+            "semantic_page"
+          ]
+        },
+        {
+          "tool": "trace_javascript_semantics",
+          "cli": "trace-javascript-semantics",
+          "description": "Trace static JavaScript data-flow, direct call/return, and closure relations from inline application Evidence or an exact same-session retained reference. Dynamic or unsupported semantics remain explicit unknowns; static reachability never claims runtime execution.",
+          "required_inputs": [
+            "application",
+            "query"
+          ],
+          "input_properties": [
+            "application",
+            "query"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "runtime-reconcile",
+      "purpose": "Reconcile static graphs with passive CDP/V8/Electron runtime observations",
+      "tools": [
+        {
+          "tool": "reconcile_javascript_runtime",
+          "cli": "reconcile-javascript-runtime",
+          "description": "Reconcile verified static JavaScript application graphs with existing passive web/Electron CDP, passive V8 Inspector, or provider-owned active Electron Evidence. Active Electron captures contribute an explicitly partial target-only runtime record; they never invent renderer scripts, frames, workers, or execution claims. Exact captured-source digests take priority over caller-declared file/URL mappings; target, frame, script, and worker ambiguity remains explicit, and source-map authority stays separate.",
+          "required_inputs": [
+            "static_layers",
+            "runtime_observations"
+          ],
+          "input_properties": [
+            "runtime_observations",
+            "static_layers"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network-decode",
+      "purpose": "Decode HAR/mitmproxy/Fiddler SAZ/qlog captures offline; protobuf/gRPC bodies with descriptor sets",
+      "tools": [
+        {
+          "tool": "inspect_web_network_capture",
+          "cli": "inspect-web-network-capture",
+          "description": "Explicit record_ordinals also decode retained protobuf/gRPC bodies whose declared content type is recognized. Optional protobuf selects exact body_pointers, framing, and a caller-supplied local FileDescriptorSet with message_type. Native gRPC and gRPC-web framing remain distinct. Wire fields are flat byte-range facts; ambiguous readings stay candidates, compressed payloads stay unknown. Page retained decoding with inspect_analysis_view kind protobuf, collection bodies/frames/fields, exact batch selectors and fields. Large text and schema values require explicit fields selection in those pages. Request detail summary for capture identity and counts; then page retained records with inspect_analysis_view kind capture (preview or complete), avoiding repeated decoding. Default detail complete preserves existing inline delivery. Inspect retained local HAR 1.2, native mitmproxy, Fiddler SAZ or aioquic 1.5.0 JSON qlog 0.3 events without contacting recorded URLs. Returns original ordinals, pointers/byte ranges/archive member names, preserved producer fields, precise numeric representations and exact exposed binary bytes inline. Excludes known transport credentials and explicitly marked values. Decodes every record before optional ordinal selection; malformed or oversized captures return no partial success. Duplicate JSON members are invalid; prototype-named members such as __proto__ are preserved as ordinary own JSON members without prototype mutation. Qlog reports trace-scoped STREAM interval unions and endpoint loss declarations; it does not recover bodies, prove network loss or correlate PCAP. Other qlog layouts are unsupported. Uses pinned upstream parsers, owned temporary files and bounded offline processes. SAZ preserves HTTP fields, XML metadata and encoded body/message bytes without replay or HAR conversion; encrypted archives are unsupported. Native mitmproxy requires caller-supplied mitmdump 12.2.3 on Linux. Browser transaction IDs, runtime attribution and original bytes of HAR Unicode text remain unknown.",
+          "required_inputs": [
+            "capture_path",
+            "format"
+          ],
+          "input_properties": [
+            "capture_path",
+            "capture_timeout_ms",
+            "detail",
+            "format",
+            "protobuf",
+            "record_ordinals",
+            "sensitive_values"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compare-captures",
+      "purpose": "Diff passive captures or exact-step-aligned scenarios (DOM, a11y, screenshots, storage, events)",
+      "tools": [
+        {
+          "tool": "compare_web_captures",
+          "cli": "compare-web-captures",
+          "description": "Compare passive web captures by providing before and after, each with the complete inspect_web_page normalized_result in inspection and an optional complete discover_webmcp_tools normalized_result in webmcp; or compare recorded scenarios by passing complete capture_browser_scenario normalized_result objects in before_scenario and after_scenario with an optional normalization policy. Use exactly one input group. Network comparison includes observed HTTP requests and WebSocket frame streams; same-URL connections are compared as an unordered collection of ordered streams, retaining connection counts without claiming stable identity between individual connections. Scenario comparison aligns exact step IDs, records deterministic literal normalization, and returns every artifact-level difference plus alignment failures inline. Missing or truncated evidence never proves equality.",
+          "required_inputs": [],
+          "input_properties": [
+            "after",
+            "after_scenario",
+            "before",
+            "before_scenario",
+            "normalization"
+          ]
+        },
+        {
+          "tool": "compare_web_screenshots",
+          "cli": "compare-web-screenshots",
+          "description": "Compare two self-verifying PNG screenshot artifacts with local pixel metrics. Returns exact changed-pixel ratios and channel deltas without OCR or external services.",
+          "required_inputs": [
+            "before",
+            "after"
+          ],
+          "input_properties": [
+            "after",
+            "before",
+            "channel_threshold"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compare-apps",
+      "purpose": "Diff two app versions / bundles / export shapes; source-vs-bundle fidelity",
+      "tools": [
+        {
+          "tool": "compare_application_versions",
+          "cli": "compare-application-versions",
+          "description": "Compare two authenticated JavaScript Application Graph versions supplied as inline Evidence or exact same-session retained references. Uses unique-only exact digest, module source digest, source-map identity, structural fingerprint, and non-module semantic-key tiers. Reports added, removed, changed, ambiguous, and unknown entities plus the complete matching changed_from graph without fuzzy or module-ordinal pairing.",
+          "required_inputs": [
+            "left",
+            "right"
+          ],
+          "input_properties": [
+            "left",
+            "left_native_observations",
+            "right",
+            "right_native_observations"
+          ]
+        },
+        {
+          "tool": "compare_bundles",
+          "cli": "compare-bundles",
+          "description": "Compare two canonical Evidence bundles by exact record membership, explicit one-to-one observation pairs, and complete residual-unknown revision histories. Supply absolute local filesystem paths; relative paths are rejected. Missing bundle members describe omission only, never behavioral equivalence; output is digest-anchored and returns every change inline.",
+          "required_inputs": [
+            "left_bundle_path",
+            "right_bundle_path"
+          ],
+          "input_properties": [
+            "left_bundle_path",
+            "record_pairs",
+            "right_bundle_path"
+          ]
+        },
+        {
+          "tool": "compare_source_to_bundle",
+          "cli": "compare-source-to-bundle",
+          "description": "Compare a cryptographically committed HistoricalSourceGraph supplied inline or as reference {kind:file,path:absolute-local-JSON-path} with authenticated JavaScript Application Graph Evidence supplied inline or by exact same-session retained reference. Omitted view preserves the full report. Optional view {kind:summary} or {kind:source-to-bundle,collection:mappings|candidates,source_paths?,mapping_ids?,statuses?,fields?,offset?,limit?} retains the full parent and returns selected facts. Query it again using inspect_analysis_view. Empty filters select none; identity fields always remain. Candidate signals are opt-in; classifications use the full comparison. Page coverage never upgrades source coverage. Uses explicit exact-digest, source-map path, current-path, suffix, and basename signals with stable weights. Classifies unchanged, modified, removed, split, merged, duplicated, and unknown; incomplete coverage and ambiguous weak signals never become absence or forced matches.",
+          "required_inputs": [
+            "reference",
+            "application"
+          ],
+          "input_properties": [
+            "application",
+            "reference",
+            "view"
+          ]
+        },
+        {
+          "tool": "compare_javascript_export_shapes",
+          "cli": "compare-javascript-export-shapes",
+          "description": "Compare static return shapes for one exact module/export selector on each authenticated JavaScript Application Graph supplied as inline Evidence or exact same-session retained references. Variants pair only by reciprocal unique literal discriminants. Each retained variant lists observed return-property names even when values stay unknown. Presence (present, absent, or unknown-coverage) is separate from value resolution: a name present on only one paired shape is added or removed when parent-property coverage is complete on both sides, including when the static value is unresolved. Dynamic values, incomplete parent coverage, and unpaired variants remain unknown. Reports JSON Pointer changes without executing JavaScript; runtime behavior requires a separate agent-run probe.",
+          "required_inputs": [
+            "left_module_path",
+            "left_export_name",
+            "right_module_path",
+            "right_export_name",
+            "left",
+            "right"
+          ],
+          "input_properties": [
+            "left",
+            "left_export_name",
+            "left_module_path",
+            "right",
+            "right_export_name",
+            "right_module_path"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "webmcp",
+      "purpose": "Inventory page-registered WebMCP tools + full input schemas (agent-facing surface of the site)",
+      "tools": [
+        {
+          "tool": "discover_webmcp_tools",
+          "cli": "discover-webmcp-tools",
+          "description": "Passively inventory every page-registered WebMCP tool and its complete structural input-schema summary using the experimental CDP WebMCP domain. Metadata is page-declared-untrusted; REA never registers or invokes discovered tools.",
+          "required_inputs": [
+            "cdp_endpoint",
+            "target_id"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "cdp_endpoint",
+            "command_timeout_ms",
+            "observation_ms",
+            "target_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "event-listeners",
+      "purpose": "Inspect listeners on a selector to understand interaction wiring",
+      "tools": [
+        {
+          "tool": "inspect_web_event_listeners",
+          "cli": "inspect-web-event-listeners",
+          "description": "Inspect listeners registered directly on the first main-document CSS match in one selected CDP page. Returns event flags, native callback locations, source ownership and exact script text/digests inline. Does not dispatch events, evaluate JavaScript or invoke handlers. Delegated ancestor/framework listeners and execution history remain unknown. Releases REA's object group and transport, preserving the external page.",
+          "required_inputs": [
+            "cdp_endpoint",
+            "target_id",
+            "selector"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "cdp_endpoint",
+            "command_timeout_ms",
+            "selector",
+            "target_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "source-attribution",
+      "purpose": "Map a bundle location back through its source map to original source",
+      "tools": [
+        {
+          "tool": "trace_web_source_location",
+          "cli": "trace-web-source-location",
+          "description": "Trace one generated position in an exported website script through an explicitly paired local source map. Verifies manifest, selected script and map SHA-256/byte identities; returns every equal-position mapping, reported source/root, resolved source URL, embedded sourcesContent and original position inline. One-based lines and zero-based UTF-16 columns; greatest generated position <= requested across lines. Duplicate sources and generated-only mappings remain distinct. Caller-selected pairing does not establish deployment authenticity or execution. Regular maps and inline indexed sections only; external section URLs are unsupported. No network access or application execution; uses the pinned upstream codec in an owned Node process with private temporary files, independent 192 MiB old-generation heap and 20-second deadline. 4 MiB map, 32 MiB reply; complete evidence or actionable resource failure. Cleanup may extend the deadline.",
+          "required_inputs": [
+            "manifest_path",
+            "script_index",
+            "source_map",
+            "generated_position"
+          ],
+          "input_properties": [
+            "decode_timeout_ms",
+            "generated_position",
+            "manifest_path",
+            "script_index",
+            "source_map"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "purpose": "Verify a typed behavioral/structural spec against Evidence; obligation ledger for reconstruction completeness",
+      "tools": [
+        {
+          "tool": "verify_reconstruction",
+          "cli": "verify-reconstruction",
+          "description": "Verify a finite typed behavioral and structural specification against a canonical Evidence bundle. Pass means every declared claim has complete comparable authority\u2014not global source equivalence; changed claims fail and missing, limited, or unresolved evidence stays unknown.",
+          "required_inputs": [
+            "specification"
+          ],
+          "input_properties": [
+            "specification"
+          ]
+        },
+        {
+          "tool": "build_reconstruction_obligation_ledger",
+          "cli": "build-reconstruction-obligation-ledger",
+          "description": "Generate the complete deterministic ReconstructionObligationLedger from an authenticated Evidence bundle, reviewed obligations, and an explicit reconstruction manifest. Static candidates remain candidates; duplicate ownership, missing original or reconstruction cases, missing parser/type, weak verifier authority, unenumerated claims, contradictions, dependencies, and residual unknowns fail closed. The inline result carries the full-ledger closure digest and typed per-obligation diagnostics.",
+          "required_inputs": [
+            "evidence_bundle",
+            "reviewed_obligations",
+            "manifest"
+          ],
+          "input_properties": [
+            "evidence_bundle",
+            "manifest",
+            "reviewed_obligations"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "screenshot",
+      "purpose": "Capture page screenshot evidence",
+      "tools": [
+        {
+          "tool": "capture_web_screenshot",
+          "cli": "capture-web-screenshot",
+          "description": "Capture the current visible viewport of one configured page as an inline, content-addressed PNG artifact. The operation never scrolls, navigates, or evaluates page JavaScript.",
+          "required_inputs": [
+            "cdp_endpoint",
+            "target_id"
+          ],
+          "input_properties": [
+            "allowed_origins",
+            "cdp_endpoint",
+            "command_timeout_ms",
+            "target_id"
+          ]
+        }
+      ]
+    }
+  ]
+}
