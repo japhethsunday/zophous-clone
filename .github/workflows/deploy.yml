@@ -6,16 +6,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,38 +24,11 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: touch dist/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  # Fallback publish for repos where Pages has not been switched to
-  # "GitHub Actions" source yet. Harmless once the primary deploy works.
-  legacy-publish:
-    needs: build
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: github-pages
-          path: artifact
-      - name: Extract site from Pages artifact
-        run: |
-          mkdir -p site
-          tar -xzf artifact/artifact.tar.gz -C site || cp -r artifact/* site/ || true
+      # Publishes dist/ to the gh-pages branch, which is this repo's
+      # active GitHub Pages source. (deploy-pages action can't be used
+      # until Pages source is switched to "GitHub Actions" in settings.)
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: site
+          folder: dist
           clean: true
-
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
